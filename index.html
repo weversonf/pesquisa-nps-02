@@ -87,6 +87,7 @@
             <div class="grid-metrics">
                 <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
                 <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
+                <div class="card-metric" style="color:#FFCC00"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
                 <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
                 <div class="card-metric" id="card-nps-total"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
             </div>
@@ -254,9 +255,7 @@
                 document.getElementById('new-pass').value = "";
                 document.getElementById('confirm-pass').value = "";
                 voltarDash();
-            } else {
-                alert("Erro ao atualizar senha.");
-            }
+            } else { alert("Erro ao atualizar senha."); }
         })
         .finally(() => {
             btn.innerText = "Atualizar Agora"; btn.disabled = false;
@@ -297,11 +296,17 @@
             (cl === "Todos" || d.cliente === cl) && (ct === "Todos" || d.contrato === ct)
         );
 
-        const t = dadosFiltradosAtuais.length, p = dadosFiltradosAtuais.filter(x => x.nota >= 9).length, det = dadosFiltradosAtuais.filter(x => x.nota <= 6).length;
+        const t = dadosFiltradosAtuais.length;
+        const p = dadosFiltradosAtuais.filter(x => x.nota >= 9).length;
+        // CÁLCULO DE NEUTROS
+        const n = dadosFiltradosAtuais.filter(x => x.nota >= 7 && x.nota <= 8).length;
+        const det = dadosFiltradosAtuais.filter(x => x.nota <= 6).length;
+        
         const nps = t > 0 ? Math.round(((p - det) / t) * 100) : 0;
 
         document.getElementById('m-total').innerText = t;
         document.getElementById('m-promotores').innerText = p;
+        document.getElementById('m-neutros').innerText = n;
         document.getElementById('m-detratores').innerText = det;
         document.getElementById('m-nps').innerText = nps;
         document.getElementById('card-nps-total').style.backgroundColor = nps >= 75 ? '#007bff' : nps >= 50 ? '#28a745' : nps >= 0 ? '#FF8C00' : '#ED1C24';
@@ -340,7 +345,17 @@
 
     function exportarExcel() {
         if (dadosFiltradosAtuais.length === 0) return alert("Não há dados para exportar.");
-        const dataExport = dadosFiltradosAtuais.map(d => ({ "Mês": d.mes, "Unidade": d.unidade, "Cliente": d.cliente, "Contrato": d.contrato, "Código": d.codigo, "Nota": d.nota, "Feedback": d.feedback }));
+        // EXPORTAÇÃO COM NEUTROS
+        const dataExport = dadosFiltradosAtuais.map(d => ({ 
+            "Mês": d.mes, 
+            "Unidade": d.unidade, 
+            "Cliente": d.cliente, 
+            "Contrato": d.contrato, 
+            "Código": d.codigo, 
+            "Nota": d.nota, 
+            "Classificação": d.nota >= 9 ? "Promotor" : d.nota >= 7 ? "Neutro" : "Detrator",
+            "Feedback": d.feedback 
+        }));
         const ws = XLSX.utils.json_to_sheet(dataExport);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "NPS");

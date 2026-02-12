@@ -151,6 +151,21 @@
     let dbContratosGlobal = [];
     let meuGrafico = null;
 
+    // Função de Segurança: Converte datas da planilha para o formato "Mar 26"
+    function normalizarMes(valor) {
+        if (!valor) return "S/M";
+        if (typeof valor === 'string' && valor.length === 6 && valor.includes(" ")) return valor;
+
+        const data = new Date(valor);
+        if (!isNaN(data.getTime())) {
+            const mesesMestrePuros = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            const mesStr = mesesMestrePuros[data.getMonth()];
+            const anoStr = data.getFullYear().toString().substring(2);
+            return `${mesStr} ${anoStr}`;
+        }
+        return valor.toString();
+    }
+
     function colorirNota(input) {
         const nota = parseInt(input.value);
         const labels = document.querySelectorAll('.nps-item label');
@@ -179,12 +194,15 @@
         .then(res => res.json()).then(res => {
             if(res.result === "success") {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                
-                // Salva o banco global de contratos formatados enviado pelo script
                 dbContratosGlobal = res.metrics ? res.metrics.listaContratos : [];
 
                 if(res.tipo === "ADM") {
-                    dadosBrutos = res.metrics.baseDados;
+                    // Normaliza os meses de toda a base de dados ao carregar
+                    dadosBrutos = res.metrics.baseDados.map(item => ({
+                        ...item,
+                        mes: normalizarMes(item.mes)
+                    }));
+
                     document.getElementById('view-adm').classList.add('active');
                     popularSelect('f-mes', [...new Set(dadosBrutos.map(d => d.mes))]);
                     popularSelect('f-unidade', res.metrics.unidades);
@@ -201,7 +219,6 @@
                     const selContrato = document.getElementById('select-contrato');
                     selContrato.innerHTML = '<option value="">Selecione o contrato...</option>';
 
-                    // Mapeia os códigos permitidos do usuário para os nomes de exibição longos
                     res.contratos.forEach(codAutorizado => {
                         const info = dbContratosGlobal.find(db => db.numero.toString() === codAutorizado.toString());
                         if(info) {
@@ -228,14 +245,13 @@
         const contrato = dbContratosGlobal.find(c => c.exibicao === nomeExibicao);
         if(contrato) {
             document.getElementById('input-num-contrato').value = contrato.numero;
-            // Atualiza os campos ocultos se necessário
             document.getElementById('h-cliente').value = contrato.cliente;
         }
     }
 
     function popularSelect(id, lista) {
         const s = document.getElementById(id);
-        const prefixo = (id === 'f-unidade') ? 'Todas' : (id === 'f-mes' || id === 'f-contrato' || id === 'f-cliente') ? 'Todos' : '';
+        const prefixo = (id === 'f-unidade') ? 'Todas' : 'Todos';
         s.innerHTML = `<option value="${prefixo}">${prefixo}</option>`;
         lista.sort().forEach(item => { if(item) s.innerHTML += `<option value="${item}">${item}</option>`; });
     }
@@ -268,8 +284,9 @@
     }
 
     function renderizarGrafico(dados) {
-        const mesesMestre = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26"];
+        const mesesMestre = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26", "Abr 26", "Mai 26", "Jun 26", "Jul 26", "Ago 26", "Set 26", "Out 26", "Nov 26", "Dez 26"];
         const labels = mesesMestre.filter(m => dadosBrutos.some(d => d.mes === m));
+        
         const scores = labels.map(m => {
             const dMes = dados.filter(x => x.mes === m);
             if(dMes.length === 0) return 0;

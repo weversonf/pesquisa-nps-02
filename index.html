@@ -42,6 +42,13 @@
         td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; }
         .tag-nota { padding: 4px 8px; border-radius: 4px; font-weight: 900; color: white; display: inline-block; text-align: center; min-width: 25px; }
 
+        .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
+        .nps-item input { display: none; }
+        .nps-item label { display: flex; align-items: center; justify-content: center; height: 35px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; font-size: 11px; border: 1px solid var(--glass-border); transition: 0.3s; }
+        .nps-item label.detrator-active { background-color: var(--vermelho-nps) !important; color: white; }
+        .nps-item label.neutro-active { background-color: #FFCC00 !important; color: black; }
+        .nps-item label.promotor-active { background-color: var(--verde-nps) !important; color: white; }
+
         footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
     </style>
 </head>
@@ -181,26 +188,28 @@
             if(res.result === "success") {
                 userTipo = res.tipo;
                 dbContratosGlobal = res.metrics.listaContratos;
-                meusContratosCodigos = res.contratos; 
+                meusContratosCodigos = res.permissoes; // IDs ou Unidades autorizadas
                 
                 document.getElementById('view-login').classList.remove('active');
                 document.getElementById('view-dashboard').classList.add('active');
-                document.getElementById('welcome-msg').innerText = `Olá, ${res.nome}`;
+                document.getElementById('welcome-msg').innerText = `${res.tipo}: ${res.nome}`;
                 
                 document.getElementById('h-email').value = user;
                 document.getElementById('h-nome').value = res.nome;
 
+                // Popula o select do FORMULÁRIO (exibe apenas o que o usuário pode avaliar)
                 const selC = document.getElementById('select-contrato');
                 selC.innerHTML = '<option value="">Selecione...</option>';
                 dbContratosGlobal.forEach(info => {
-                    if(userTipo === "ADM" || meusContratosCodigos.includes(info.numero.toString())) {
+                    if(userTipo === "ADM" || meusContratosCodigos.includes(info.numero.toString()) || meusContratosCodigos.includes(info.unidade)) {
                         selC.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
                     }
                 });
 
+                // A base já vem filtrada do servidor
                 dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
                 
-                if(userTipo !== "ADM") {
+                if(userTipo === "Usuario") {
                     document.getElementById('btn-nova-pesquisa').style.display = "block";
                 }
 
@@ -226,18 +235,15 @@
             el.innerHTML = html;
         };
 
-        // 1. Mês: Sempre baseado em tudo o que existe na Página1
+        // Cascata total baseada apenas no que existe na Página1
         popular(selMes, dadosBrutos.map(d => d.mes), "Todos", valMes);
 
-        // 2. Unidade: Apenas o que existe no MÊS selecionado
         const dadosNoMes = dadosBrutos.filter(d => valMes === "Todos" || d.mes === valMes);
         popular(selUnid, dadosNoMes.map(d => d.unidade), "Todas", valUnid);
 
-        // 3. Cliente: Apenas o que existe no MÊS e UNIDADE selecionados
         const dadosNaUnidade = dadosNoMes.filter(d => valUnid === "Todas" || d.unidade === valUnid);
         popular(selCli, dadosNaUnidade.map(d => d.cliente), "Todos", valCli);
         
-        // 4. Contrato: Apenas o que existe no MÊS, UNIDADE e CLIENTE selecionados (Página1)
         const dadosNoCliente = dadosNaUnidade.filter(d => valCli === "Todos" || d.cliente === valCli);
         popular(selCont, dadosNoCliente.map(d => d.contrato), "Todos", valCont);
     }

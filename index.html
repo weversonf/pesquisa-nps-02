@@ -141,7 +141,7 @@
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
     let dadosBrutos = [];
     let dbContratosGlobal = [];
-    let meusContratosNomes = [];
+    let meusContratosCodigos = []; 
     let meuGrafico = null;
     let userTipo = "";
 
@@ -188,32 +188,27 @@
             if(res.result === "success") {
                 userTipo = res.tipo;
                 dbContratosGlobal = res.metrics.listaContratos;
-                meusContratosNomes = res.contratos; // Nomes dos contratos autorizados (Coluna A)
+                meusContratosCodigos = res.contratos; // Códigos (11721...)
                 
                 document.getElementById('view-login').classList.remove('active');
                 document.getElementById('view-dashboard').classList.add('active');
                 document.getElementById('welcome-msg').innerText = `Olá, ${res.nome}`;
                 
-                // Configura campos ocultos do form
                 document.getElementById('h-email').value = user;
                 document.getElementById('h-nome').value = res.nome;
 
-                // Popula Select de Contratos do Formulário
                 const selC = document.getElementById('select-contrato');
                 selC.innerHTML = '<option value="">Selecione...</option>';
-                meusContratosNomes.forEach(nomeOriginal => {
-                    const info = dbContratosGlobal.find(db => db.nomeOriginal === nomeOriginal.trim());
-                    if(info) selC.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
+                dbContratosGlobal.forEach(info => {
+                    if(userTipo === "ADM" || meusContratosCodigos.includes(info.numero.toString())) {
+                        selC.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
+                    }
                 });
 
-                // Se não for ADM, filtra a base de dados para mostrar apenas os contratos do usuário
-                let baseCompleta = res.metrics.baseDados || [];
+                dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
+                
                 if(userTipo !== "ADM") {
-                    dadosBrutos = baseCompleta.filter(d => meusContratosNomes.includes(d.contrato.trim())).map(item => ({...item, mes: normalizarMes(item.mes)}));
                     document.getElementById('btn-nova-pesquisa').style.display = "block";
-                    document.getElementById('div-f-cliente').style.display = "none"; // Cliente geralmente é fixo para o usuário
-                } else {
-                    dadosBrutos = baseCompleta.map(item => ({...item, mes: normalizarMes(item.mes)}));
                 }
 
                 atualizarOpcoesFiltros();
@@ -242,12 +237,15 @@
         popular(selUnid, dadosBrutos.map(d => d.unidade), "Todas", valUnid);
         popular(selCli, dadosBrutos.map(d => d.cliente), "Todos", valCli);
         
-        const filtradosParaCont = dadosBrutos.filter(d => 
-            (valMes === "Todos" || d.mes === valMes) &&
-            (valUnid === "Todas" || d.unidade === valUnid) &&
-            (valCli === "Todos" || d.cliente === valCli)
-        );
-        popular(selCont, filtradosParaCont.map(d => d.contrato), "Todos", valCont);
+        // CORREÇÃO PARA ARCELORMITTAL: Filtra na lista GLOBAL de contratos
+        const listaContratosParaDropdown = dbContratosGlobal.filter(info => {
+            const pertenceAoCliente = (valCli === "Todos" || info.cliente === valCli);
+            const pertenceAUnidade = (valUnid === "Todas" || info.unidade === valUnid);
+            const autorizado = (userTipo === "ADM" || meusContratosCodigos.includes(info.numero.toString()));
+            return pertenceAoCliente && pertenceAUnidade && autorizado;
+        });
+
+        popular(selCont, listaContratosParaDropdown.map(info => info.nomeOriginal), "Todos", valCont);
     }
 
     function aplicarFiltros() {

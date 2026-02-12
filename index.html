@@ -137,13 +137,13 @@
 
     <div class="view" id="view-senha">
         <div class="card" style="max-width: 350px; margin: 50px auto;">
-            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Alterar Senha</h2>
+            <h2 id="titulo-senha" style="text-align: center; margin-bottom: 20px; font-weight: 900;">Alterar Senha</h2>
             <label>Nova Senha</label>
             <input type="password" id="new-pass" placeholder="Mínimo 4 caracteres">
             <label>Confirmar Senha</label>
             <input type="password" id="confirm-pass" placeholder="Repita a nova senha">
             <button class="btn" onclick="salvarNovaSenha()">Atualizar Agora</button>
-            <button class="btn-outline" onclick="voltarDash()" style="width:100%; margin-top:10px; border-color:#666; color:#666">CANCELAR</button>
+            <button id="btn-cancelar-senha" class="btn-outline" onclick="voltarDash()" style="width:100%; margin-top:10px; border-color:#666; color:#666">CANCELAR</button>
         </div>
     </div>
 </div>
@@ -197,6 +197,8 @@
     function abrirTrocaSenha() {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-senha').classList.add('active');
+        document.getElementById('btn-cancelar-senha').style.display = 'inline-flex';
+        document.getElementById('titulo-senha').innerText = "Alterar Senha";
     }
 
     function autenticar() {
@@ -211,14 +213,21 @@
                 userEmailLogado = res.email;
                 dbContratosGlobal = res.metrics.listaContratos;
                 meusContratosCodigos = res.permissoes; 
+
+                // --- LÓGICA DE SENHA PADRÃO ---
+                if (pass === "12345") {
+                    alert("⚠️ Segurança Makro: Identificamos o uso da senha padrão. Você deve alterá-la para prosseguir.");
+                    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                    document.getElementById('view-senha').classList.add('active');
+                    document.getElementById('btn-cancelar-senha').style.display = 'none';
+                    document.getElementById('titulo-senha').innerText = "Troca de Senha Obrigatória";
+                    return;
+                }
                 
                 document.getElementById('view-login').classList.remove('active');
                 document.getElementById('view-dashboard').classList.add('active');
                 document.getElementById('welcome-msg').innerText = `${res.tipo}: ${res.nome}`;
                 
-                document.getElementById('h-email').value = user;
-                document.getElementById('h-nome').value = res.nome;
-
                 const selC = document.getElementById('select-contrato');
                 selC.innerHTML = '<option value="">Selecione...</option>';
                 dbContratosGlobal.forEach(info => {
@@ -228,7 +237,6 @@
                 });
 
                 dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
-                
                 if(userTipo === "Usuario") document.getElementById('btn-nova-pesquisa').style.display = "block";
 
                 atualizarOpcoesFiltros();
@@ -243,6 +251,7 @@
 
         if(nPass.length < 4) return alert("A senha deve ter pelo menos 4 caracteres.");
         if(nPass !== cPass) return alert("As senhas não coincidem.");
+        if(nPass === "12345") return alert("Você não pode usar a senha padrão como nova senha.");
 
         const btn = event.target;
         btn.innerText = "SALVANDO..."; btn.disabled = true;
@@ -251,10 +260,8 @@
         .then(res => res.json())
         .then(res => {
             if(res.result === "success") {
-                alert("Senha atualizada com sucesso!");
-                document.getElementById('new-pass').value = "";
-                document.getElementById('confirm-pass').value = "";
-                voltarDash();
+                alert("Senha atualizada com sucesso! Para sua segurança, faça login novamente.");
+                location.reload();
             } else { alert("Erro ao atualizar senha."); }
         })
         .finally(() => {
@@ -298,7 +305,6 @@
 
         const t = dadosFiltradosAtuais.length;
         const p = dadosFiltradosAtuais.filter(x => x.nota >= 9).length;
-        // CÁLCULO DE NEUTROS
         const n = dadosFiltradosAtuais.filter(x => x.nota >= 7 && x.nota <= 8).length;
         const det = dadosFiltradosAtuais.filter(x => x.nota <= 6).length;
         
@@ -345,7 +351,6 @@
 
     function exportarExcel() {
         if (dadosFiltradosAtuais.length === 0) return alert("Não há dados para exportar.");
-        // EXPORTAÇÃO COM NEUTROS
         const dataExport = dadosFiltradosAtuais.map(d => ({ 
             "Mês": d.mes, 
             "Unidade": d.unidade, 

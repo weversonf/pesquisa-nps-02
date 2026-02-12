@@ -182,7 +182,7 @@
         btn.disabled = true;
         btn.innerText = 'ENVIANDO...';
 
-        // Enviamos para a ação 'survey' definida no Apps Script
+        // Enviamos explicitamente para a ação "survey" para gravar na aba correta
         fetch(`${scriptURL}?action=survey`, { method: 'POST', body: new FormData(form)})
             .then(response => {
                 alert('Obrigado! Sua avaliação foi enviada com sucesso para a Makro Engenharia.');

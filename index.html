@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema NPS | Makro Engenharia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --azul-profundo: #011f42; 
+            --azul-makro: #023F88;
+            --vermelho: #ED1C24; 
+            --glass: rgba(255,255,255,0.05); 
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        body { 
+            background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo)); 
+            color: white; min-height: 100vh; 
+        }
+        header { padding: 1.5rem; text-align: center; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .container { padding: 2rem; max-width: 600px; margin: 0 auto; }
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 2rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        input, select, textarea { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; background: var(--vermelho); color: white; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        .btn:disabled { background: #555; }
+        .nps-container { display: flex; justify-content: space-between; gap: 5px; margin: 15px 0; }
+        .nps-item { flex: 1; text-align: center; }
+        .nps-item input { display: none; }
+        .nps-item label { display: flex; height: 40px; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .nps-item input:checked + label { background: var(--vermelho); transform: scale(1.1); }
+        footer { text-align: center; padding: 2rem; font-size: 0.7rem; opacity: 0.5; }
+    </style>
+</head>
+<body>
+
+<header>
+    <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" width="130">
+</header>
+
+<div class="container">
+    <div class="view active" id="view-login">
+        <div class="card">
+            <h2 style="text-align: center; margin-bottom: 20px;">Acesso Restrito</h2>
+            <input type="text" id="user-login" placeholder="Usuário">
+            <input type="password" id="user-pass" placeholder="Senha">
+            <button class="btn" onclick="autenticar()">Entrar no Sistema</button>
+        </div>
+    </div>
+
+    <div class="view" id="view-adm">
+        <div class="card">
+            <h2>Painel de Respostas NPS</h2>
+            <p style="margin-bottom: 20px;">Bem-vindo, Administrador.</p>
+            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center;">
+                <p>O dashboard em tempo real pode ser visualizado na sua planilha NPS v02.</p>
+            </div>
+            <button class="btn" onclick="location.reload()" style="background: #444;">Sair</button>
+        </div>
+    </div>
+
+    <div class="view" id="view-cliente">
+        <div class="card">
+            <h2 id="msg-cliente">Olá!</h2>
+            <form id="formNps">
+                <label>Selecione o Contrato / Operação</label>
+                <select id="select-contrato" name="Contrato_nome" required></select>
+                
+                <div class="nps-container">
+                    <div class="nps-item"><input type="radio" name="Nota" id="n0" value="0"><label for="n0">0</label></div>
+                    <div class="nps-item"><input type="radio" name="Nota" id="n5" value="5"><label for="n5">5</label></div>
+                    <div class="nps-item"><input type="radio" name="Nota" id="n10" value="10" checked><label for="n10">10</label></div>
+                </div>
+                
+                <textarea name="Feedback" placeholder="O que podemos fazer para melhorar nossa nota?" rows="4"></textarea>
+                
+                <input type="hidden" name="Cliente_nome" id="h-cliente">
+                <input type="hidden" name="Contato_email" id="h-email">
+                <input type="hidden" name="Contato_nome" id="h-nome">
+                
+                <button type="submit" class="btn">Enviar Avaliação</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer>© 2026 MAKRO ENGENHARIA | BRAND HUB</footer>
+
+<script>
+    // URL do seu Google Apps Script (Implantado como Web App)
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
+
+    // FUNÇÃO DE LOGIN REAL
+    function autenticar() {
+        const user = document.getElementById('user-login').value;
+        const pass = document.getElementById('user-pass').value;
+        const btn = document.querySelector('#view-login .btn');
+
+        if(!user || !pass) return alert("Preencha todos os campos");
+
+        btn.innerText = "VALIDANDO...";
+        btn.disabled = true;
+
+        fetch(`${scriptURL}?action=login&user=${user}&pass=${pass}`)
+        .then(res => res.json())
+        .then(response => {
+            if (response.result === "success") {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                
+                if (response.tipo === "ADM") {
+                    document.getElementById('view-adm').classList.add('active');
+                } else {
+                    document.getElementById('view-cliente').classList.add('active');
+                    document.getElementById('msg-cliente').innerText = `Olá, ${response.nome}`;
+                    document.getElementById('h-cliente').value = response.nome;
+                    document.getElementById('h-email').value = user;
+                    document.getElementById('h-nome').value = response.nome;
+                    
+                    const select = document.getElementById('select-contrato');
+                    select.innerHTML = response.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
+                }
+            } else {
+                alert("Usuário ou senha incorretos!");
+                btn.innerText = "Entrar no Sistema";
+                btn.disabled = false;
+            }
+        })
+        .catch(() => {
+            alert("Erro na conexão com a planilha.");
+            btn.disabled = false;
+            btn.innerText = "Entrar no Sistema";
+        });
+    }
+
+    // FUNÇÃO DE ENVIO DA PESQUISA
+    document.getElementById('formNps').addEventListener('submit', e => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.disabled = true; 
+        btn.innerText = 'ENVIANDO...';
+
+        const formData = new FormData(e.target);
+        
+        // Envia com o parâmetro action=survey para salvar na aba correta
+        fetch(`${scriptURL}?action=survey`, { 
+            method: 'POST', 
+            body: formData 
+        })
+        .then(res => res.json())
+        .then(response => {
+            if (response.result === "success") {
+                alert('Obrigado! Avaliação registrada com sucesso.');
+                location.reload(); 
+            } else { alert('Erro ao salvar os dados.'); btn.disabled = false; }
+        })
+        .catch(() => { 
+            alert('Erro no envio. Verifique sua conexão.'); 
+            btn.disabled = false; 
+            btn.innerText = 'Enviar Avaliação';
+        });
+    });
+</script>
+</body>
+</html>

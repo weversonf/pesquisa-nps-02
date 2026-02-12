@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --azul-profundo: #011f42; --azul-makro: #023F88;
@@ -34,20 +35,14 @@
         .card-metric h2 { font-size: 24px; font-weight: 900; }
         
         .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; }
+        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; }
+        .btn-excel { border-color: #28a745; color: #28a745; }
 
         .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
         table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
         th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
         td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; }
         .tag-nota { padding: 4px 8px; border-radius: 4px; font-weight: 900; color: white; display: inline-block; text-align: center; min-width: 25px; }
-
-        .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
-        .nps-item input { display: none; }
-        .nps-item label { display: flex; align-items: center; justify-content: center; height: 35px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; font-size: 11px; border: 1px solid var(--glass-border); transition: 0.3s; }
-        .nps-item label.detrator-active { background-color: var(--vermelho-nps) !important; color: white; }
-        .nps-item label.neutro-active { background-color: #FFCC00 !important; color: black; }
-        .nps-item label.promotor-active { background-color: var(--verde-nps) !important; color: white; }
 
         footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
     </style>
@@ -73,8 +68,9 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 id="welcome-msg" style="font-size: 0.9rem;">Painel de Indicadores</h3>
-                <div style="display: flex; gap: 10px;">
-                    <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn btn-outline" style="display:none;">+ AVALIAR</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn-outline" style="display:none;">+ AVALIAR</button>
+                    <button onclick="exportarExcel()" class="btn-outline btn-excel">⬇ EXCEL</button>
                     <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
                 </div>
             </div>
@@ -109,7 +105,7 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
                 <h2>Nova Avaliação</h2>
-                <button onclick="voltarDash()" class="btn btn-outline">VOLTAR</button>
+                <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
             </div>
             <form id="pesquisaMakro">
                 <label>Mês de Referência</label>
@@ -122,7 +118,9 @@
                 <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);">
                 <label>Sua Nota (0 a 10)</label>
                 <div class="nps-container">
-                    <script>for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)"><label for="n${i}">${i}</label></div>`);</script>
+                    <script>
+                        for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1; display:flex;"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)" style="display:none"><label for="n${i}" style="flex:1; display:flex; align-items:center; justify-content:center; height:35px; background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); border-radius:5px; cursor:pointer; font-size:11px;">${i}</label></div>`);
+                    </script>
                 </div>
                 <label>Feedback</label>
                 <textarea name="Feedback" rows="3" placeholder="Sua opinião..."></textarea>
@@ -140,6 +138,7 @@
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
     let dadosBrutos = [];
+    let dadosFiltradosAtuais = [];
     let dbContratosGlobal = [];
     let meusContratosCodigos = []; 
     let meuGrafico = null;
@@ -159,11 +158,14 @@
     function colorirNota(input) {
         const nota = parseInt(input.value);
         const labels = document.querySelectorAll('.nps-item label');
-        labels.forEach(l => l.classList.remove('detrator-active', 'neutro-active', 'promotor-active'));
+        labels.forEach(l => {
+            l.style.backgroundColor = "rgba(255,255,255,0.1)";
+            l.style.color = "white";
+        });
         const labelAtivo = document.querySelector(`label[for="${input.id}"]`);
-        if (nota >= 0 && nota <= 6) labelAtivo.classList.add('detrator-active');
-        else if (nota >= 7 && nota <= 8) labelAtivo.classList.add('neutro-active');
-        else if (nota >= 9 && nota <= 10) labelAtivo.classList.add('promotor-active');
+        if (nota >= 0 && nota <= 6) labelAtivo.style.backgroundColor = "var(--vermelho-nps)";
+        else if (nota >= 7 && nota <= 8) { labelAtivo.style.backgroundColor = "#FFCC00"; labelAtivo.style.color = "black"; }
+        else if (nota >= 9 && nota <= 10) labelAtivo.style.backgroundColor = "var(--verde-nps)";
     }
 
     function abrirFormulario() {
@@ -176,8 +178,6 @@
         document.getElementById('view-dashboard').classList.add('active');
     }
 
-    document.addEventListener('keypress', e => { if (e.key === 'Enter' && document.querySelector('.view.active').id === 'view-login') autenticar(); });
-
     function autenticar() {
         const user = document.getElementById('user-login').value, pass = document.getElementById('user-pass').value, btn = document.getElementById('btnLogin');
         if(!user || !pass) return alert("Preencha os campos.");
@@ -188,7 +188,7 @@
             if(res.result === "success") {
                 userTipo = res.tipo;
                 dbContratosGlobal = res.metrics.listaContratos;
-                meusContratosCodigos = res.permissoes; // IDs ou Unidades autorizadas
+                meusContratosCodigos = res.permissoes; 
                 
                 document.getElementById('view-login').classList.remove('active');
                 document.getElementById('view-dashboard').classList.add('active');
@@ -197,7 +197,6 @@
                 document.getElementById('h-email').value = user;
                 document.getElementById('h-nome').value = res.nome;
 
-                // Popula o select do FORMULÁRIO (exibe apenas o que o usuário pode avaliar)
                 const selC = document.getElementById('select-contrato');
                 selC.innerHTML = '<option value="">Selecione...</option>';
                 dbContratosGlobal.forEach(info => {
@@ -206,12 +205,9 @@
                     }
                 });
 
-                // A base já vem filtrada do servidor
                 dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
                 
-                if(userTipo === "Usuario") {
-                    document.getElementById('btn-nova-pesquisa').style.display = "block";
-                }
+                if(userTipo === "Usuario") document.getElementById('btn-nova-pesquisa').style.display = "block";
 
                 atualizarOpcoesFiltros();
                 aplicarFiltros();
@@ -235,15 +231,11 @@
             el.innerHTML = html;
         };
 
-        // Cascata total baseada apenas no que existe na Página1
         popular(selMes, dadosBrutos.map(d => d.mes), "Todos", valMes);
-
         const dadosNoMes = dadosBrutos.filter(d => valMes === "Todos" || d.mes === valMes);
         popular(selUnid, dadosNoMes.map(d => d.unidade), "Todas", valUnid);
-
         const dadosNaUnidade = dadosNoMes.filter(d => valUnid === "Todas" || d.unidade === valUnid);
         popular(selCli, dadosNaUnidade.map(d => d.cliente), "Todos", valCli);
-        
         const dadosNoCliente = dadosNaUnidade.filter(d => valCli === "Todos" || d.cliente === valCli);
         popular(selCont, dadosNoCliente.map(d => d.contrato), "Todos", valCont);
     }
@@ -252,12 +244,12 @@
         const m = document.getElementById('f-mes').value, u = document.getElementById('f-unidade').value,
               cl = document.getElementById('f-cliente').value, ct = document.getElementById('f-contrato').value;
 
-        const filtrados = dadosBrutos.filter(d => 
+        dadosFiltradosAtuais = dadosBrutos.filter(d => 
             (m === "Todos" || d.mes === m) && (u === "Todas" || d.unidade === u) &&
             (cl === "Todos" || d.cliente === cl) && (ct === "Todos" || d.contrato === ct)
         );
 
-        const t = filtrados.length, p = filtrados.filter(x => x.nota >= 9).length, det = filtrados.filter(x => x.nota <= 6).length;
+        const t = dadosFiltradosAtuais.length, p = dadosFiltradosAtuais.filter(x => x.nota >= 9).length, det = dadosFiltradosAtuais.filter(x => x.nota <= 6).length;
         const nps = t > 0 ? Math.round(((p - det) / t) * 100) : 0;
 
         document.getElementById('m-total').innerText = t;
@@ -266,8 +258,8 @@
         document.getElementById('m-nps').innerText = nps;
         document.getElementById('card-nps-total').style.backgroundColor = nps >= 75 ? '#007bff' : nps >= 50 ? '#28a745' : nps >= 0 ? '#FF8C00' : '#ED1C24';
 
-        renderizarGrafico(filtrados);
-        renderizarTabela(filtrados);
+        renderizarGrafico(dadosFiltradosAtuais);
+        renderizarTabela(dadosFiltradosAtuais);
     }
 
     function renderizarTabela(dados) {
@@ -296,6 +288,27 @@
             data: { labels: labels, datasets: [{ data: scores, backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), borderRadius: 5 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#fff', anchor: 'end', align: 'top', offset: -2, font: { weight: 'bold', size: 10 } } }, scales: { y: { beginAtZero: true, min: -100, max: 120, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
         });
+    }
+
+    function exportarExcel() {
+        if (dadosFiltradosAtuais.length === 0) return alert("Não há dados para exportar com os filtros atuais.");
+        
+        const dataExport = dadosFiltradosAtuais.map(d => ({
+            "Mês": d.mes,
+            "Unidade": d.unidade,
+            "Cliente": d.cliente,
+            "Contrato": d.contrato,
+            "Código": d.codigo,
+            "Nota": d.nota,
+            "Feedback": d.feedback
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Relatório NPS");
+        
+        const dataH = new Date().toLocaleDateString().replace(/\//g, '-');
+        XLSX.writeFile(wb, `Relatorio_NPS_Makro_${dataH}.xlsx`);
     }
 
     function vincularCodigo(exibicao) {

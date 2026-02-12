@@ -35,8 +35,9 @@
         .card-metric h2 { font-size: 24px; font-weight: 900; }
         
         .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; }
+        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         .btn-excel { border-color: #28a745; color: #28a745; }
+        .btn-config { border-color: #aaa; color: #aaa; }
 
         .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
         table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
@@ -71,6 +72,7 @@
                 <div style="display: flex; gap: 8px;">
                     <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn-outline" style="display:none;">+ AVALIAR</button>
                     <button onclick="exportarExcel()" class="btn-outline btn-excel">⬇ EXCEL</button>
+                    <button onclick="abrirTrocaSenha()" class="btn-outline btn-config">⚙ SENHA</button>
                     <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
                 </div>
             </div>
@@ -131,6 +133,18 @@
             </form>
         </div>
     </div>
+
+    <div class="view" id="view-senha">
+        <div class="card" style="max-width: 350px; margin: 50px auto;">
+            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Alterar Senha</h2>
+            <label>Nova Senha</label>
+            <input type="password" id="new-pass" placeholder="Mínimo 4 caracteres">
+            <label>Confirmar Senha</label>
+            <input type="password" id="confirm-pass" placeholder="Repita a nova senha">
+            <button class="btn" onclick="salvarNovaSenha()">Atualizar Agora</button>
+            <button class="btn-outline" onclick="voltarDash()" style="width:100%; margin-top:10px; border-color:#666; color:#666">CANCELAR</button>
+        </div>
+    </div>
 </div>
 
 <footer>MAKRO ENGENHARIA © 2026</footer>
@@ -143,6 +157,7 @@
     let meusContratosCodigos = []; 
     let meuGrafico = null;
     let userTipo = "";
+    let userEmailLogado = "";
 
     function normalizarMes(valor) {
         if (!valor) return "S/M";
@@ -169,13 +184,18 @@
     }
 
     function abrirFormulario() {
-        document.getElementById('view-dashboard').classList.remove('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-formulario').classList.add('active');
     }
 
     function voltarDash() {
-        document.getElementById('view-formulario').classList.remove('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-dashboard').classList.add('active');
+    }
+
+    function abrirTrocaSenha() {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-senha').classList.add('active');
     }
 
     function autenticar() {
@@ -187,6 +207,7 @@
         .then(res => res.json()).then(res => {
             if(res.result === "success") {
                 userTipo = res.tipo;
+                userEmailLogado = res.email;
                 dbContratosGlobal = res.metrics.listaContratos;
                 meusContratosCodigos = res.permissoes; 
                 
@@ -213,6 +234,33 @@
                 aplicarFiltros();
             } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
         }).catch(() => { alert("Erro na conexão"); btn.innerText = "Entrar"; btn.disabled = false; });
+    }
+
+    function salvarNovaSenha() {
+        const nPass = document.getElementById('new-pass').value;
+        const cPass = document.getElementById('confirm-pass').value;
+
+        if(nPass.length < 4) return alert("A senha deve ter pelo menos 4 caracteres.");
+        if(nPass !== cPass) return alert("As senhas não coincidem.");
+
+        const btn = event.target;
+        btn.innerText = "SALVANDO..."; btn.disabled = true;
+
+        fetch(`${scriptURL}?action=changePass&user=${encodeURIComponent(userEmailLogado)}&newPass=${encodeURIComponent(nPass)}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(res => {
+            if(res.result === "success") {
+                alert("Senha atualizada com sucesso!");
+                document.getElementById('new-pass').value = "";
+                document.getElementById('confirm-pass').value = "";
+                voltarDash();
+            } else {
+                alert("Erro ao atualizar senha.");
+            }
+        })
+        .finally(() => {
+            btn.innerText = "Atualizar Agora"; btn.disabled = false;
+        });
     }
 
     function acionarFiltros() { atualizarOpcoesFiltros(); aplicarFiltros(); }
@@ -291,24 +339,12 @@
     }
 
     function exportarExcel() {
-        if (dadosFiltradosAtuais.length === 0) return alert("Não há dados para exportar com os filtros atuais.");
-        
-        const dataExport = dadosFiltradosAtuais.map(d => ({
-            "Mês": d.mes,
-            "Unidade": d.unidade,
-            "Cliente": d.cliente,
-            "Contrato": d.contrato,
-            "Código": d.codigo,
-            "Nota": d.nota,
-            "Feedback": d.feedback
-        }));
-
+        if (dadosFiltradosAtuais.length === 0) return alert("Não há dados para exportar.");
+        const dataExport = dadosFiltradosAtuais.map(d => ({ "Mês": d.mes, "Unidade": d.unidade, "Cliente": d.cliente, "Contrato": d.contrato, "Código": d.codigo, "Nota": d.nota, "Feedback": d.feedback }));
         const ws = XLSX.utils.json_to_sheet(dataExport);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Relatório NPS");
-        
-        const dataH = new Date().toLocaleDateString().replace(/\//g, '-');
-        XLSX.writeFile(wb, `Relatorio_NPS_Makro_${dataH}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "NPS");
+        XLSX.writeFile(wb, `NPS_Makro_Export.xlsx`);
     }
 
     function vincularCodigo(exibicao) {

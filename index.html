@@ -22,7 +22,10 @@
         .card { background: var(--glass); backdrop-filter: blur(15px); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
         .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
         select, input, textarea { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: white; width: 100%; outline: none; font-size: 11px; }
-        select option { background: var(--azul-profundo); }
+        select option {
+            background: var(--azul-profundo); /* Cor de fundo do menu */
+            color: #cccccc; /* ALTERE AQUI: cinza claro para melhor leitura */
+        }
         label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
         .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }

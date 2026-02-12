@@ -21,16 +21,18 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .card { background: var(--glass); backdrop-filter: blur(15px); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
         .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        select, input { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: white; width: 100%; outline: none; font-size: 11px; }
+        select, input, textarea { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: white; width: 100%; outline: none; font-size: 11px; }
+        select option { background: var(--azul-profundo); }
         label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
         .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
         .card-metric h2 { font-size: 24px; font-weight: 900; }
-        .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
         .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
         .nps-item input { display: none; }
         .nps-item label { display: flex; align-items: center; justify-content: center; height: 35px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; font-size: 11px; border: 1px solid var(--glass-border); }
         .nps-item input:checked + label { background: var(--vermelho-nps); border-color: #fff; transform: scale(1.1); font-weight: bold; }
+        footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -46,7 +48,7 @@
             <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Acesso BI</h2>
             <input type="text" id="user-login" placeholder="E-mail corporativo">
             <input type="password" id="user-pass" placeholder="Senha">
-            <button class="btn" onclick="autenticar()">Entrar</button>
+            <button class="btn" id="btnLogin" onclick="autenticar()">Entrar</button>
         </div>
     </div>
 
@@ -107,15 +109,30 @@
     </div>
 </div>
 
+<footer>MAKRO ENGENHARIA © 2026</footer>
+
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
     let dadosBrutos = [];
     let dbContratosGlobal = [];
     let meuGrafico = null;
 
+    // Função de Ativar Enter no Login
+    document.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            const activeView = document.querySelector('.view.active').id;
+            if (activeView === 'view-login') autenticar();
+        }
+    });
+
     function autenticar() {
         const user = document.getElementById('user-login').value;
         const pass = document.getElementById('user-pass').value;
+        const btn = document.getElementById('btnLogin');
+        if(!user || !pass) return alert("Preencha os campos.");
+        
+        btn.innerText = "VALIDANDO..."; btn.disabled = true;
+
         fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
         .then(res => res.json()).then(res => {
             if(res.result === "success") {
@@ -138,7 +155,13 @@
                     document.getElementById('select-contrato').innerHTML = res.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
                     vincularCodigo(res.contratos[0].trim());
                 }
-            } else { alert("Acesso inválido."); }
+            } else { 
+                alert("Acesso negado."); 
+                btn.innerText = "Entrar"; btn.disabled = false;
+            }
+        }).catch(err => {
+            alert("Erro de conexão.");
+            btn.innerText = "Entrar"; btn.disabled = false;
         });
     }
 
@@ -149,6 +172,8 @@
 
     function popularSelect(id, lista) {
         const s = document.getElementById(id);
+        const prefixo = (id === 'f-unidade') ? 'Todas' : (id === 'f-mes' || id === 'f-contrato' || id === 'f-cliente') ? 'Todos' : '';
+        s.innerHTML = `<option value="${prefixo}">${prefixo}</option>`;
         lista.sort().forEach(item => { if(item) s.innerHTML += `<option value="${item}">${item}</option>`; });
     }
 
@@ -180,10 +205,11 @@
     }
 
     function renderizarGrafico(dados) {
-        const meses = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26"];
-        const labels = meses.filter(m => dados.some(d => d.mes === m));
+        const mesesMestre = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26"];
+        const labels = mesesMestre.filter(m => dadosBrutos.some(d => d.mes === m));
         const scores = labels.map(m => {
             const dMes = dados.filter(x => x.mes === m);
+            if(dMes.length === 0) return 0;
             const p = dMes.filter(x => x.nota >= 9).length;
             const det = dMes.filter(x => x.nota <= 6).length;
             return Math.round(((p - det) / dMes.length) * 100);
@@ -193,7 +219,7 @@
         meuGrafico = new Chart(document.getElementById('npsChart'), {
             type: 'bar',
             data: { labels: labels, datasets: [{ data: scores, backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), borderRadius: 5 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, suggestedMax: 100, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, min: -100, max: 100, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
         });
     }
 

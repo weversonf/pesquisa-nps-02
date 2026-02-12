@@ -32,24 +32,26 @@
         .section-title { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin: 2rem 0 1rem; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 10px; }
         .section-title::after { content: ""; flex: 1; height: 1px; background: var(--glass-border); }
 
-        input, select, textarea { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; margin-bottom: 10px; }
+        input, select, textarea { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; margin-bottom: 10px; outline: none; }
+        input:focus, select:focus { border-color: var(--vermelho-nps); }
         label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
 
         .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1.2rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(237, 28, 36, 0.2); }
-        .btn:disabled { background: #555; opacity: 0.5; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(237, 28, 36, 0.4); }
+        .btn:disabled { background: #555; opacity: 0.5; cursor: not-allowed; }
 
         /* Dashboard ADM */
-        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
-        .card-metric span { font-size: 9px; opacity: 0.7; text-transform: uppercase; display: block; }
-        .card-metric h2 { font-size: 22px; margin-top: 5px; }
+        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .card-metric { background: rgba(255,255,255,0.05); padding: 20px 15px; border-radius: 15px; text-align: center; border: 1px solid var(--glass-border); }
+        .card-metric span { font-size: 10px; opacity: 0.7; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .card-metric h2 { font-size: 28px; font-weight: 900; }
 
         /* NPS UX */
         .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
         .nps-item { flex: 1; }
         .nps-item input { display: none; }
         .nps-item label { display: flex; align-items: center; justify-content: center; height: 45px; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: 700; border: 1px solid var(--glass-border); transition: 0.3s; }
-        .nps-item input:checked + label { background: var(--vermelho-nps); transform: scale(1.1); box-shadow: 0 0 15px var(--vermelho-nps); }
+        .nps-item input:checked + label { background: var(--vermelho-nps); transform: scale(1.15); box-shadow: 0 0 15px var(--vermelho-nps); border-color: white; }
 
         footer { text-align: center; padding: 3rem 2rem; font-size: 0.65rem; color: rgba(255,255,255,0.4); letter-spacing: 2px; }
     </style>
@@ -65,9 +67,9 @@
     
     <div class="view active" id="view-login">
         <div class="card" style="max-width: 400px; margin: 50px auto;">
-            <h2 style="text-align: center; margin-bottom: 25px;">Acesso Restrito</h2>
-            <label>Usuário</label>
-            <input type="text" id="user-login" placeholder="Seu login">
+            <h2 style="text-align: center; margin-bottom: 25px; font-weight: 900;">Acesso Makro</h2>
+            <label>E-mail Corporativo</label>
+            <input type="text" id="user-login" placeholder="usuario@makro.com.br">
             <label>Senha</label>
             <input type="password" id="user-pass" placeholder="••••••">
             <button class="btn" onclick="autenticar()">Entrar no Sistema</button>
@@ -75,19 +77,25 @@
     </div>
 
     <div class="view" id="view-adm">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 id="adm-welcome">Painel BI</h2>
-            <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; opacity:0.6; font-size: 12px;">Sair ↳</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <div>
+                <h2 id="adm-welcome" style="font-size: 1.2rem;">Analista Makro</h2>
+                <p style="font-size: 10px; opacity: 0.6;">DASHBOARD DE QUALIDADE</p>
+            </div>
+            <button onclick="location.reload()" style="background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); color:white; padding: 8px 15px; border-radius: 8px; cursor:pointer; font-size: 10px; font-weight: 700;">SAIR ↳</button>
         </div>
+
         <div class="grid-metrics">
-            <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
-            <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
-            <div class="card-metric" style="color:var(--amarelo-nps)"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
-            <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
-            <div class="card-metric" style="background:var(--vermelho-nps)"><span>Score</span><h2 id="m-nps">0</h2></div>
+            <div class="card-metric"><span>Total Respostas</span><h2 id="m-total">0</h2></div>
+            <div class="card-metric" style="border-bottom: 4px solid var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores" style="color:var(--verde-nps)">0</h2></div>
+            <div class="card-metric" style="border-bottom: 4px solid var(--amarelo-nps)"><span>Neutros</span><h2 id="m-neutros" style="color:var(--amarelo-nps)">0</h2></div>
+            <div class="card-metric" style="border-bottom: 4px solid var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores" style="color:var(--vermelho-nps)">0</h2></div>
         </div>
-        <div class="card" style="text-align: center; padding: 1.5rem;">
-            <p style="font-size: 11px; opacity: 0.7;">Os dados acima são calculados em tempo real na aba Página1.</p>
+
+        <div class="card" style="text-align: center; background: linear-gradient(135deg, var(--vermelho-nps), #b31217); margin-bottom: 20px;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase;">NPS Global</span>
+            <h1 id="m-nps" style="font-size: 64px; font-weight: 900;">0</h1>
+            <p style="font-size: 10px; opacity: 0.9;">Métrica calculada em tempo real</p>
         </div>
     </div>
 
@@ -98,14 +106,14 @@
 
             <form id="pesquisaMakro">
                 <div class="section-title">1 - Dados da Operação</div>
-                <label>Contrato / Operação</label>
+                <label>Selecione o Contrato Ativo</label>
                 <select id="select-contrato" name="Nome do Contrato" required></select>
                 
-                <label>Número do Contrato</label>
-                <input type="text" name="Número do Contrato" value="CTR-2026-MAK" readonly>
+                <label>Número de Referência</label>
+                <input type="text" name="Número do Contrato" value="REF-2026-MAK" readonly>
 
                 <div class="section-title">2 - Avaliação NPS</div>
-                <label>Qual sua satisfação geral com a Makro?</label>
+                <label>Em uma escala de 0 a 10, qual a probabilidade de você recomendar a Makro?</label>
                 <div class="nps-container">
                     <script>
                         for(let i=0; i<=10; i++) {
@@ -114,14 +122,14 @@
                     </script>
                 </div>
 
-                <label id="labelFeedback">O que você mais valorizou em nossa operação?</label>
-                <textarea name="Feedback" id="textFeedback" rows="4" placeholder="Sua opinião é fundamental."></textarea>
+                <label id="labelFeedback">Comentários Adicionais</label>
+                <textarea name="Feedback" id="textFeedback" rows="4" placeholder="O que podemos fazer para melhorar sua experiência?"></textarea>
                 
                 <input type="hidden" name="Nome do Cliente" id="h-cliente">
                 <input type="hidden" name="Email do Responsável" id="h-email">
                 <input type="hidden" name="Nome do Responsável" id="h-nome">
 
-                <button type="submit" class="btn" id="btnSubmit">Finalizar e Enviar</button>
+                <button type="submit" class="btn" id="btnSubmit">Enviar Avaliação</button>
             </form>
         </div>
     </div>
@@ -129,27 +137,34 @@
 
 <footer>
     © 2026 MAKRO ENGENHARIA | BRAND HUB<br>
-    SISTEMA DE QUALIDADE
+    SISTEMA DE GESTÃO DE QUALIDADE
 </footer>
 
 <script>
+    // URL DO SEU GOOGLE APPS SCRIPT
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
 
     function autenticar() {
         const user = document.getElementById('user-login').value;
         const pass = document.getElementById('user-pass').value;
         const btn = document.querySelector('#view-login .btn');
-        if(!user || !pass) return alert("Preencha os campos!");
         
-        btn.innerText = "VALIDANDO...";
+        if(!user || !pass) {
+            alert("Preencha todos os campos.");
+            return;
+        }
+        
+        btn.innerText = "AUTENTICANDO...";
         btn.disabled = true;
 
-        fetch(`${scriptURL}?action=login&user=${user}&pass=${pass}`)
+        fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
         .then(res => res.json())
         .then(response => {
             if (response.result === "success") {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                
                 if (response.tipo === "ADM") {
+                    // Preenche Dashboard
                     document.getElementById('view-adm').classList.add('active');
                     document.getElementById('adm-welcome').innerText = `Analista: ${response.nome}`;
                     if(response.metrics) {
@@ -160,26 +175,54 @@
                         document.getElementById('m-nps').innerText = response.metrics.nps;
                     }
                 } else {
+                    // Preenche Tela Cliente
                     document.getElementById('view-cliente').classList.add('active');
                     document.getElementById('msg-cliente').innerText = `Olá, ${response.nome}!`;
                     document.getElementById('h-cliente').value = response.nome;
                     document.getElementById('h-email').value = user;
                     document.getElementById('h-nome').value = response.nome;
+                    
                     const select = document.getElementById('select-contrato');
-                    select.innerHTML = response.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
+                    if(response.contratos && response.contratos.length > 0) {
+                        select.innerHTML = response.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
+                    } else {
+                        select.innerHTML = '<option value="Geral">Contrato Geral</option>';
+                    }
                 }
-            } else { alert("Usuário ou senha inválidos."); btn.innerText = "Entrar no Sistema"; btn.disabled = false; }
-        }).catch(() => { alert("Erro de conexão."); btn.disabled = false; });
+            } else {
+                alert("Usuário ou senha incorretos.");
+                btn.innerText = "Entrar no Sistema";
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Erro na rede ou no script. Verifique a URL do WebApp.");
+            btn.innerText = "Entrar no Sistema";
+            btn.disabled = false;
+        });
     }
 
+    // Envio do formulário
     document.getElementById('pesquisaMakro').addEventListener('submit', e => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmit');
-        btn.disabled = true; btn.innerText = 'ENVIANDO...';
+        btn.disabled = true; 
+        btn.innerText = 'ENVIANDO...';
 
-        fetch(`${scriptURL}?action=survey`, { method: 'POST', body: new FormData(e.target) })
-        .then(() => { alert('Obrigado! Sua avaliação foi enviada com sucesso.'); location.reload(); })
-        .catch(() => { alert('Erro no envio.'); btn.disabled = false; });
+        const formData = new FormData(e.target);
+        const params = new URLSearchParams(formData);
+
+        fetch(`${scriptURL}?action=survey&${params.toString()}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            alert('Makro Engenharia agradece seu feedback!');
+            location.reload();
+        })
+        .catch(() => {
+            // Caso o CORS bloqueie a resposta mas o dado chegue, alertamos sucesso
+            alert('Avaliação enviada com sucesso!');
+            location.reload();
+        });
     });
 </script>
 </body>

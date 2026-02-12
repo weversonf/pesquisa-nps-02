@@ -14,39 +14,27 @@
             --branco: #FFFFFF; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
-        
-        body {
-            background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo));
-            background-attachment: fixed; color: var(--branco); min-height: 100vh;
-        }
-
+        body { background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo)); background-attachment: fixed; color: var(--branco); min-height: 100vh; }
         header { padding: 1.5rem 1rem; text-align: center; backdrop-filter: blur(12px); background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--glass-border); }
         .logo-img { max-width: 140px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); margin-bottom: 0.5rem; }
-
         .container { padding: 1.5rem; max-width: 700px; margin: 0 auto; }
         .view { display: none; }
         .view.active { display: block; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
         .card { background: var(--glass); backdrop-filter: blur(15px); padding: 2rem; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 8px 32px rgba(0,0,0,0.3); margin-bottom: 20px; }
-        
         .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
         .card-metric span { font-size: 9px; opacity: 0.7; text-transform: uppercase; display: block; }
         .card-metric h2 { font-size: 24px; margin-top: 5px; }
-
         input, select, textarea { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; margin-bottom: 10px; outline: none; }
         label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; display: block; }
-
         .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1.2rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
         .btn:disabled { background: #555; opacity: 0.5; }
-
         .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
         .nps-item { flex: 1; }
         .nps-item input { display: none; }
         .nps-item label { display: flex; align-items: center; justify-content: center; height: 40px; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; font-size: 12px; border: 1px solid var(--glass-border); }
         .nps-item input:checked + label { background: var(--vermelho-nps); transform: scale(1.1); font-weight: bold; }
-
         footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
     </style>
 </head>
@@ -61,12 +49,12 @@
     
     <div class="view active" id="view-login">
         <div class="card" style="max-width: 380px; margin: 40px auto;">
-            <h2 style="text-align: center; margin-bottom: 20px;">Login</h2>
-            <label>Usuário</label>
-            <input type="text" id="user-login" placeholder="E-mail">
+            <h2 style="text-align: center; margin-bottom: 20px;">Acesso Restrito</h2>
+            <label>E-mail</label>
+            <input type="text" id="user-login" placeholder="usuario@makro.com.br">
             <label>Senha</label>
             <input type="password" id="user-pass" placeholder="••••••">
-            <button class="btn" id="btnLogin" onclick="autenticar()">Acessar</button>
+            <button class="btn" id="btnLogin" onclick="autenticar()">Entrar</button>
         </div>
     </div>
 
@@ -75,16 +63,14 @@
             <h2 id="adm-welcome" style="font-size: 1rem;">Painel BI</h2>
             <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 11px; opacity:0.5;">SAIR ↳</button>
         </div>
-
         <div class="grid-metrics">
             <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
             <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
             <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
-            <div class="card-metric" style="background:var(--vermelho-nps)"><span>NPS</span><h2 id="m-nps">0</h2></div>
+            <div class="card-metric" style="background:var(--vermelho-nps)"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
         </div>
-
         <div class="card">
-            <h3 style="font-size: 0.8rem; margin-bottom: 15px; text-transform: uppercase; opacity: 0.7;">Tendência de Notas (Últimos Períodos)</h3>
+            <h3 style="font-size: 0.8rem; margin-bottom: 15px; text-transform: uppercase; opacity: 0.7;">Tendência NPS por Mês</h3>
             <canvas id="npsChart" style="width: 100%; height: 250px;"></canvas>
         </div>
     </div>
@@ -92,16 +78,20 @@
     <div class="view" id="view-cliente">
         <div class="card">
             <h2 id="msg-cliente">Olá!</h2>
-            <p style="font-size: 11px; opacity: 0.6; margin-bottom: 20px;">Sua opinião é vital para a Makro Engenharia.</p>
+            <p style="font-size: 11px; opacity: 0.6; margin-bottom: 20px;">Sua opinião ajuda a Makro Engenharia a evoluir.</p>
 
             <form id="pesquisaMakro">
+                <label>Mês de Referência da Operação</label>
+                <select name="Mes Referente" required>
+                    <option value="Janeiro/2026">Janeiro/2026</option>
+                    <option value="Fevereiro/2026" selected>Fevereiro/2026</option>
+                    <option value="Março/2026">Março/2026</option>
+                </select>
+
                 <label>Contrato / Operação</label>
                 <select id="select-contrato" name="Nome do Contrato" required></select>
                 
-                <input type="hidden" name="Número do Contrato" value="CTR-2026-MAK">
-
-                <div style="margin: 20px 0 10px; font-size: 0.8rem; font-weight: bold; border-bottom: 1px solid var(--glass-border); padding-bottom: 5px;">AVALIAÇÃO</div>
-                <label>Qual sua satisfação geral?</label>
+                <label>Satisfação Geral</label>
                 <div class="nps-container">
                     <script>
                         for(let i=0; i<=10; i++) {
@@ -110,94 +100,71 @@
                     </script>
                 </div>
 
-                <label>O que mais valorizou?</label>
-                <textarea name="Feedback" rows="3" placeholder="Sua mensagem..."></textarea>
+                <label>O que você mais valorizou?</label>
+                <textarea name="Feedback" rows="3" placeholder="Sua opinião..."></textarea>
                 
+                <input type="hidden" name="Número do Contrato" value="CTR-2026-MAK">
                 <input type="hidden" name="Nome do Cliente" id="h-cliente">
                 <input type="hidden" name="Email do Responsável" id="h-email">
                 <input type="hidden" name="Nome do Responsável" id="h-nome">
 
-                <button type="submit" class="btn" id="btnSubmit">Enviar Resposta</button>
+                <button type="submit" class="btn" id="btnSubmit">Finalizar Avaliação</button>
             </form>
         </div>
     </div>
 </div>
 
-<footer>MAKRO ENGENHARIA © 2026</footer>
-
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
 
-    // 1. FUNÇÃO ENTER NO LOGIN
-    document.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            const activeView = document.querySelector('.view.active').id;
-            if (activeView === 'view-login') {
-                autenticar();
-            }
-        }
+    // 1. SUPORTE AO ENTER NO LOGIN
+    document.getElementById('view-login').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') { autenticar(); }
     });
 
     function autenticar() {
         const user = document.getElementById('user-login').value;
         const pass = document.getElementById('user-pass').value;
         const btn = document.getElementById('btnLogin');
-        
         if(!user || !pass) return alert("Preencha os campos!");
-        
-        btn.innerText = "AGUARDE...";
-        btn.disabled = true;
+        btn.innerText = "VALIDANDO..."; btn.disabled = true;
 
         fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
         .then(res => res.json())
         .then(response => {
             if (response.result === "success") {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                
                 if (response.tipo === "ADM") {
                     document.getElementById('view-adm').classList.add('active');
-                    document.getElementById('adm-welcome').innerText = `Analista: ${response.nome}`;
-                    
-                    // Preencher Métricas
                     document.getElementById('m-total').innerText = response.metrics.total;
                     document.getElementById('m-promotores').innerText = response.metrics.promotores;
                     document.getElementById('m-detratores').innerText = response.metrics.detratores;
                     document.getElementById('m-nps').innerText = response.metrics.nps;
-
-                    // GERAR GRÁFICO (Exemplo com dados vindos do Script ou Estáticos para teste)
-                    gerarGrafico(response.metrics.historico || [0, 0, 0, 0, 0]); 
+                    gerarGrafico(response.metrics.labels, response.metrics.historico);
                 } else {
                     document.getElementById('view-cliente').classList.add('active');
                     document.getElementById('msg-cliente').innerText = `Olá, ${response.nome}!`;
                     document.getElementById('h-cliente').value = response.nome;
                     document.getElementById('h-email').value = user;
                     document.getElementById('h-nome').value = response.nome;
-                    const select = document.getElementById('select-contrato');
-                    select.innerHTML = response.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
+                    document.getElementById('select-contrato').innerHTML = response.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
                 }
-            } else {
-                alert("Dados incorretos.");
-                btn.innerText = "Acessar";
-                btn.disabled = false;
-            }
-        })
-        .catch(() => { alert("Erro de conexão."); btn.disabled = false; });
+            } else { alert("Dados inválidos."); btn.innerText = "Entrar"; btn.disabled = false; }
+        }).catch(() => { alert("Erro de conexão."); btn.disabled = false; });
     }
 
-    function gerarGrafico(dados) {
+    function gerarGrafico(labels, dados) {
         const ctx = document.getElementById('npsChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Maio'], // Você pode tornar isso dinâmico depois
+                labels: labels || ['Nov', 'Dez', 'Jan', 'Fev'],
                 datasets: [{
                     label: 'Score NPS',
-                    data: dados,
+                    data: dados || [0, 0, 0, 0],
                     borderColor: '#ED1C24',
                     backgroundColor: 'rgba(237, 28, 36, 0.2)',
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 3
+                    fill: true, tension: 0.4, borderWidth: 3
                 }]
             },
             options: {
@@ -216,8 +183,8 @@
         const btn = document.getElementById('btnSubmit');
         btn.disabled = true; btn.innerText = 'ENVIANDO...';
         fetch(`${scriptURL}?action=survey&${new URLSearchParams(new FormData(e.target)).toString()}`, { method: 'POST' })
-        .then(() => { alert('Obrigado!'); location.reload(); })
-        .catch(() => { alert('Enviado com sucesso.'); location.reload(); });
+        .then(() => { alert('Obrigado por sua avaliação!'); location.reload(); })
+        .catch(() => { alert('Enviado!'); location.reload(); });
     });
 </script>
 </body>

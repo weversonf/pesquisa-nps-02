@@ -3,91 +3,53 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pesquisa de Satisfação | Makro Engenharia</title>
+    <title>Sistema NPS | Makro Engenharia</title>
     <link rel="icon" type="image/png" href="https://makroengenharia.com.br/wp-content/uploads/2023/03/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --azul-profundo: #011f42; 
-            --azul-makro: #023F88;
-            --vermelho-nps: #ED1C24;
-            --amarelo-nps: #FFCC00;
-            --verde-nps: #28a745;
-            --branco: #FFFFFF;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --azul-profundo: #011f42; --azul-makro: #023F88;
+            --vermelho-nps: #ED1C24; --amarelo-nps: #FFCC00; --verde-nps: #28a745;
+            --branco: #FFFFFF; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
         
         body {
             background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo));
-            background-attachment: fixed;
-            color: var(--branco);
-            min-height: 100vh;
-            padding-bottom: 40px;
+            background-attachment: fixed; color: var(--branco); min-height: 100vh;
         }
 
-        header {
-            padding: 3rem 1rem;
-            text-align: center;
-            backdrop-filter: blur(12px);
-            background: rgba(0, 0, 0, 0.3);
-            border-bottom: 1px solid var(--glass-border);
-        }
+        header { padding: 2rem 1rem; text-align: center; backdrop-filter: blur(12px); background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--glass-border); }
+        .logo-img { max-width: 160px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); margin-bottom: 0.5rem; }
 
-        .logo-img { max-width: 180px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); margin-bottom: 1.2rem; }
-        .subtitle { font-size: 0.75rem; font-weight: 400; letter-spacing: 5px; text-transform: uppercase; opacity: 0.9; }
+        .container { padding: 1.5rem; max-width: 650px; margin: 0 auto; }
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .container { padding: 1.5rem; max-width: 550px; margin: 0 auto; }
-
-        .section-title {
-            font-size: 0.8rem; color: rgba(255,255,255,0.6);
-            margin: 2.5rem 0 1rem 0; text-transform: uppercase; letter-spacing: 2px;
-            display: flex; align-items: center; gap: 10px;
-        }
+        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 2rem; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        
+        .section-title { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin: 2rem 0 1rem; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 10px; }
         .section-title::after { content: ""; flex: 1; height: 1px; background: var(--glass-border); }
 
-        .card-input {
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            padding: 1.2rem;
-            border-radius: 16px;
-            border: 1px solid var(--glass-border);
-            margin-bottom: 12px;
-        }
+        input, select, textarea { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; margin-bottom: 10px; }
+        label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
 
-        label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--branco); letter-spacing: 1px; display: block; margin-bottom: 8px; }
+        .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1.2rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(237, 28, 36, 0.2); }
+        .btn:disabled { background: #555; opacity: 0.5; }
 
-        input[type="text"], input[type="email"], textarea {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--glass-border);
-            padding: 12px; border-radius: 8px; color: white; font-size: 1rem; width: 100%;
-        }
+        /* Dashboard ADM */
+        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
+        .card-metric span { font-size: 9px; opacity: 0.7; text-transform: uppercase; display: block; }
+        .card-metric h2 { font-size: 22px; margin-top: 5px; }
 
-        /* UX NPS */
-        .nps-container { display: flex; justify-content: space-between; gap: 4px; margin-top: 10px; }
+        /* NPS UX */
+        .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
         .nps-item { flex: 1; }
         .nps-item input { display: none; }
-        .nps-item label {
-            display: flex; align-items: center; justify-content: center;
-            height: 45px; background: rgba(255,255,255,0.1);
-            border-radius: 8px; cursor: pointer; font-weight: 700;
-            transition: all 0.3s; border: 1px solid var(--glass-border);
-        }
-
-        .nps-item.detrator input:checked + label { background: var(--vermelho-nps); box-shadow: 0 0 15px var(--vermelho-nps); transform: scale(1.1); }
-        .nps-item.neutro input:checked + label { background: var(--amarelo-nps); color: #000; box-shadow: 0 0 15px var(--amarelo-nps); transform: scale(1.1); }
-        .nps-item.promotor input:checked + label { background: var(--verde-nps); box-shadow: 0 0 15px var(--verde-nps); transform: scale(1.1); }
-
-        .btn-enviar {
-            background: linear-gradient(90deg, #ED1C24, #b31217);
-            color: white; padding: 1.2rem; border-radius: 16px; border: none; width: 100%;
-            font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
-            margin-top: 2rem; cursor: pointer; box-shadow: 0 10px 20px rgba(237, 28, 36, 0.3);
-            transition: 0.3s;
-        }
-
-        .btn-enviar:disabled { background: #555; cursor: not-allowed; box-shadow: none; }
+        .nps-item label { display: flex; align-items: center; justify-content: center; height: 45px; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: 700; border: 1px solid var(--glass-border); transition: 0.3s; }
+        .nps-item input:checked + label { background: var(--vermelho-nps); transform: scale(1.1); box-shadow: 0 0 15px var(--vermelho-nps); }
 
         footer { text-align: center; padding: 3rem 2rem; font-size: 0.65rem; color: rgba(255,255,255,0.4); letter-spacing: 2px; }
     </style>
@@ -96,109 +58,129 @@
 
 <header>
     <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" alt="Makro Logo" class="logo-img">
-    <div class="subtitle">Satisfação do Cliente</div>
+    <div style="font-size: 0.7rem; letter-spacing: 5px; opacity: 0.8; text-transform: uppercase;">Brand Hub | NPS v02</div>
 </header>
 
 <div class="container">
-    <form id="pesquisaMakro">
-        
-        <div class="section-title">1 - Dados do Cliente</div>
-        <div class="card-input">
-            <label>Nome do Cliente / Empresa</label>
-            <input type="text" name="Nome do Cliente" placeholder="Razão Social ou Nome Fantasia" required>
+    
+    <div class="view active" id="view-login">
+        <div class="card" style="max-width: 400px; margin: 50px auto;">
+            <h2 style="text-align: center; margin-bottom: 25px;">Acesso Restrito</h2>
+            <label>Usuário</label>
+            <input type="text" id="user-login" placeholder="Seu login">
+            <label>Senha</label>
+            <input type="password" id="user-pass" placeholder="••••••">
+            <button class="btn" onclick="autenticar()">Entrar no Sistema</button>
         </div>
-        <div class="card-input">
-            <label>Nome do Contrato / Operação</label>
-            <input type="text" name="Nome do Contrato" placeholder="Ex: Operação Cais do Porto" required>
-        </div>
+    </div>
 
-        <div class="section-title">2 - Identificação do Contrato</div>
-        <div class="card-input">
-            <label>Número do Contrato</label>
-            <input type="text" name="Número do Contrato" placeholder="Ex: CTR-2026-MAK" required>
+    <div class="view" id="view-adm">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="adm-welcome">Painel BI</h2>
+            <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; opacity:0.6; font-size: 12px;">Sair ↳</button>
         </div>
+        <div class="grid-metrics">
+            <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
+            <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
+            <div class="card-metric" style="color:var(--amarelo-nps)"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
+            <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
+            <div class="card-metric" style="background:var(--vermelho-nps)"><span>Score</span><h2 id="m-nps">0</h2></div>
+        </div>
+        <div class="card" style="text-align: center; padding: 1.5rem;">
+            <p style="font-size: 11px; opacity: 0.7;">Os dados acima são calculados em tempo real na aba Página1.</p>
+        </div>
+    </div>
 
-        <div class="section-title">3 - Dados do Contato</div>
-        <div class="card-input">
-            <label>Email do Responsável</label>
-            <input type="email" name="Email do Responsável" placeholder="seu@email.com.br" required>
-        </div>
-        <div class="card-input">
-            <label>Nome do Responsável</label>
-            <input type="text" name="Nome do Responsável" placeholder="Nome Completo" required>
-        </div>
+    <div class="view" id="view-cliente">
+        <div class="card">
+            <h2 id="msg-cliente" style="margin-bottom: 5px;">Olá!</h2>
+            <p style="font-size: 12px; opacity: 0.7; margin-bottom: 20px;">Sua avaliação ajuda a Makro Engenharia a evoluir.</p>
 
-        <div class="section-title">4 - Sua Avaliação</div>
-        <div class="card-input">
-            <label>Em uma escala de 0 a 10, qual sua satisfação geral?</label>
-            <div class="nps-container">
-                <div class="nps-item detrator"><input type="radio" name="Nota" id="n0" value="0" onclick="updateFeedback(0)"><label for="n0">0</label></div>
-                <div class="nps-item detrator"><input type="radio" name="Nota" id="n1" value="1" onclick="updateFeedback(1)"><label for="n1">1</label></div>
-                <div class="nps-item detrator"><input type="radio" name="Nota" id="n2" value="2" onclick="updateFeedback(2)"><label for="n2">2</label></div>
-                <div class="nps-item detrator"><input type="radio" name="Nota" id="n3" value="3" onclick="updateFeedback(3)"><label for="n3">3</label></div>
-                <div class="nps-item detrator"><input type="radio" name="Nota" id="n4" value="4" onclick="updateFeedback(4)"><label for="n4">4</label></div>
-                <div class="nps-item detrator"><input type="radio" name="Nota" id="n5" value="5" onclick="updateFeedback(5)"><label for="n5">5</label></div>
-                <div class="nps-item detrator"><input type="radio" name="Nota" id="n6" value="6" onclick="updateFeedback(6)"><label for="n6">6</label></div>
-                <div class="nps-item neutro"><input type="radio" name="Nota" id="n7" value="7" onclick="updateFeedback(7)"><label for="n7">7</label></div>
-                <div class="nps-item neutro"><input type="radio" name="Nota" id="n8" value="8" onclick="updateFeedback(8)"><label for="n8">8</label></div>
-                <div class="nps-item promotor"><input type="radio" name="Nota" id="n9" value="9" onclick="updateFeedback(9)"><label for="n9">9</label></div>
-                <div class="nps-item promotor"><input type="radio" name="Nota" id="n10" value="10" onclick="updateFeedback(10)" checked><label for="n10">10</label></div>
-            </div>
-        </div>
+            <form id="pesquisaMakro">
+                <div class="section-title">1 - Dados da Operação</div>
+                <label>Contrato / Operação</label>
+                <select id="select-contrato" name="Nome do Contrato" required></select>
+                
+                <label>Número do Contrato</label>
+                <input type="text" name="Número do Contrato" value="CTR-2026-MAK" readonly>
 
-        <div class="card-input">
-            <label id="labelFeedback">O que você mais valorizou em nossa operação?</label>
-            <textarea name="Feedback" id="textFeedback" rows="4" placeholder="Sua opinião é fundamental."></textarea>
-        </div>
+                <div class="section-title">2 - Avaliação NPS</div>
+                <label>Qual sua satisfação geral com a Makro?</label>
+                <div class="nps-container">
+                    <script>
+                        for(let i=0; i<=10; i++) {
+                            document.write(`<div class="nps-item"><input type="radio" name="Nota" id="n${i}" value="${i}" ${i===10?'checked':''}><label for="n${i}">${i}</label></div>`);
+                        }
+                    </script>
+                </div>
 
-        <button type="submit" class="btn-enviar" id="btnSubmit">Finalizar e Enviar</button>
-    </form>
+                <label id="labelFeedback">O que você mais valorizou em nossa operação?</label>
+                <textarea name="Feedback" id="textFeedback" rows="4" placeholder="Sua opinião é fundamental."></textarea>
+                
+                <input type="hidden" name="Nome do Cliente" id="h-cliente">
+                <input type="hidden" name="Email do Responsável" id="h-email">
+                <input type="hidden" name="Nome do Responsável" id="h-nome">
+
+                <button type="submit" class="btn" id="btnSubmit">Finalizar e Enviar</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <footer>
-    © 2026 MAKRO SOLUÇÕES EM MOVIMENTO<br>
-    SISTEMA DE QUALIDADE MAKRO
+    © 2026 MAKRO ENGENHARIA | BRAND HUB<br>
+    SISTEMA DE QUALIDADE
 </footer>
 
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
-    const form = document.getElementById('pesquisaMakro');
 
-    function updateFeedback(nota) {
-        const label = document.getElementById('labelFeedback');
-        const area = document.getElementById('textFeedback');
-        if (nota <= 9) {
-            label.innerText = "Como podemos melhorar nossa nota?";
-            area.placeholder = "Conte-nos o que faltou para chegarmos ao 10.";
-        } else {
-            label.innerText = "O que você mais valorizou em nossa operação?";
-            area.placeholder = "Ficamos felizes com sua nota! Deixe um elogio ou sugestão.";
-        }
+    function autenticar() {
+        const user = document.getElementById('user-login').value;
+        const pass = document.getElementById('user-pass').value;
+        const btn = document.querySelector('#view-login .btn');
+        if(!user || !pass) return alert("Preencha os campos!");
+        
+        btn.innerText = "VALIDANDO...";
+        btn.disabled = true;
+
+        fetch(`${scriptURL}?action=login&user=${user}&pass=${pass}`)
+        .then(res => res.json())
+        .then(response => {
+            if (response.result === "success") {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                if (response.tipo === "ADM") {
+                    document.getElementById('view-adm').classList.add('active');
+                    document.getElementById('adm-welcome').innerText = `Analista: ${response.nome}`;
+                    if(response.metrics) {
+                        document.getElementById('m-total').innerText = response.metrics.total;
+                        document.getElementById('m-promotores').innerText = response.metrics.promotores;
+                        document.getElementById('m-neutros').innerText = response.metrics.neutros;
+                        document.getElementById('m-detratores').innerText = response.metrics.detratores;
+                        document.getElementById('m-nps').innerText = response.metrics.nps;
+                    }
+                } else {
+                    document.getElementById('view-cliente').classList.add('active');
+                    document.getElementById('msg-cliente').innerText = `Olá, ${response.nome}!`;
+                    document.getElementById('h-cliente').value = response.nome;
+                    document.getElementById('h-email').value = user;
+                    document.getElementById('h-nome').value = response.nome;
+                    const select = document.getElementById('select-contrato');
+                    select.innerHTML = response.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
+                }
+            } else { alert("Usuário ou senha inválidos."); btn.innerText = "Entrar no Sistema"; btn.disabled = false; }
+        }).catch(() => { alert("Erro de conexão."); btn.disabled = false; });
     }
 
-    form.addEventListener('submit', e => {
+    document.getElementById('pesquisaMakro').addEventListener('submit', e => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmit');
-        btn.disabled = true;
-        btn.innerText = 'ENVIANDO...';
+        btn.disabled = true; btn.innerText = 'ENVIANDO...';
 
-        // Enviamos explicitamente para a ação "survey" para gravar na aba correta
-        fetch(`${scriptURL}?action=survey`, { method: 'POST', body: new FormData(form)})
-            .then(response => {
-                alert('Obrigado! Sua avaliação foi enviada com sucesso para a Makro Engenharia.');
-                btn.disabled = false;
-                btn.innerText = 'FINALIZAR E ENVIAR';
-                form.reset();
-                updateFeedback(10);
-            })
-            .catch(error => {
-                console.error('Erro!', error.message);
-                alert('Erro ao enviar. Verifique sua conexão e tente novamente.');
-                btn.disabled = false;
-                btn.innerText = 'FINALIZAR E ENVIAR';
-            });
+        fetch(`${scriptURL}?action=survey`, { method: 'POST', body: new FormData(e.target) })
+        .then(() => { alert('Obrigado! Sua avaliação foi enviada com sucesso.'); location.reload(); })
+        .catch(() => { alert('Erro no envio.'); btn.disabled = false; });
     });
 </script>
-
 </body>
 </html>

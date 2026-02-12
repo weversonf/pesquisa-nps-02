@@ -26,33 +26,29 @@
         select, input, textarea {
             background: rgba(255, 255, 255, 0.1); 
             border: 1px solid var(--glass-border); 
-            padding: 10px; 
-            border-radius: 8px; 
-            color: #cccccc; 
-            width: 100%; 
-            outline: none; 
-            font-size: 11px; 
-            margin-bottom: 20px;
+            padding: 10px; border-radius: 8px; color: #cccccc; width: 100%; outline: none; font-size: 11px; margin-bottom: 20px;
         }
         
         #btnLogin { margin-top: 10px; }
-        
-        select option {
-            background: var(--azul-profundo);
-            color: #cccccc;
-        }
-        
+        select option { background: var(--azul-profundo); color: #cccccc; }
         label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
+        
         .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
         .card-metric h2 { font-size: 24px; font-weight: 900; }
         
         .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
         
+        /* Estilos da Tabela de Histórico */
+        .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
+        th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
+        td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; vertical-align: middle; }
+        .tag-nota { padding: 4px 8px; border-radius: 4px; font-weight: 900; color: white; display: inline-block; text-align: center; min-width: 25px; }
+
         .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
         .nps-item input { display: none; }
         .nps-item label { display: flex; align-items: center; justify-content: center; height: 35px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; font-size: 11px; border: 1px solid var(--glass-border); transition: 0.3s; }
-        
         .nps-item label.detrator-active { background-color: var(--vermelho-nps) !important; color: white; border-color: #fff; transform: scale(1.1); font-weight: bold; }
         .nps-item label.neutro-active { background-color: #FFCC00 !important; color: black; border-color: #fff; transform: scale(1.1); font-weight: bold; }
         .nps-item label.promotor-active { background-color: var(--verde-nps) !important; color: white; border-color: #fff; transform: scale(1.1); font-weight: bold; }
@@ -98,7 +94,22 @@
                 <div class="card-metric" id="card-nps-total"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
             </div>
 
-            <div style="height: 300px;"><canvas id="npsChart"></canvas></div>
+            <div style="height: 250px; margin-bottom: 30px;"><canvas id="npsChart"></canvas></div>
+
+            <h4 style="font-size: 10px; text-transform: uppercase; margin-bottom: 10px; color: var(--vermelho-nps);">Histórico de Feedbacks</h4>
+            <div class="table-wrapper">
+                <table id="tabela-historico">
+                    <thead>
+                        <tr>
+                            <th>Mês</th>
+                            <th>Cliente / Contrato</th>
+                            <th>Nota</th>
+                            <th>Feedback</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -112,13 +123,10 @@
                     <option value="Fev 26" selected>Fev 26</option>
                     <option value="Mar 26">Mar 26</option>
                 </select>
-                
                 <label>Contrato</label>
                 <select id="select-contrato" name="Nome do Contrato" onchange="vincularCodigo(this.value)" required></select>
-                
                 <label>Número do Contrato (Referencial)</label>
                 <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);">
-
                 <label>Sua Nota (0 a 10)</label>
                 <div class="nps-container">
                     <script>
@@ -130,13 +138,9 @@
                         }
                     </script>
                 </div>
-
                 <label>Feedback</label>
                 <textarea name="Feedback" rows="3" placeholder="Sua opinião..."></textarea>
-                
-                <input type="hidden" name="Nome do Cliente" id="h-cliente">
-                <input type="hidden" name="Email do Responsável" id="h-email">
-                <input type="hidden" name="Nome do Responsável" id="h-nome">
+                <input type="hidden" name="Nome do Cliente" id="h-cliente"><input type="hidden" name="Email do Responsável" id="h-email"><input type="hidden" name="Nome do Responsável" id="h-nome">
                 <button type="submit" class="btn" id="btnSubmit" style="margin-top: 15px;">Enviar Avaliação</button>
             </form>
         </div>
@@ -151,17 +155,13 @@
     let dbContratosGlobal = [];
     let meuGrafico = null;
 
-    // Função de Segurança: Converte datas da planilha para o formato "Mar 26"
     function normalizarMes(valor) {
         if (!valor) return "S/M";
         if (typeof valor === 'string' && valor.length === 6 && valor.includes(" ")) return valor;
-
         const data = new Date(valor);
         if (!isNaN(data.getTime())) {
             const mesesMestrePuros = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-            const mesStr = mesesMestrePuros[data.getMonth()];
-            const anoStr = data.getFullYear().toString().substring(2);
-            return `${mesStr} ${anoStr}`;
+            return `${mesesMestrePuros[data.getMonth()]} ${data.getFullYear().toString().substring(2)}`;
         }
         return valor.toString();
     }
@@ -177,10 +177,7 @@
     }
 
     document.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            const activeView = document.querySelector('.view.active').id;
-            if (activeView === 'view-login') autenticar();
-        }
+        if (e.key === 'Enter' && document.querySelector('.view.active').id === 'view-login') autenticar();
     });
 
     function autenticar() {
@@ -197,10 +194,10 @@
                 dbContratosGlobal = res.metrics ? res.metrics.listaContratos : [];
 
                 if(res.tipo === "ADM") {
-                    // Normaliza os meses de toda a base de dados ao carregar
                     dadosBrutos = res.metrics.baseDados.map(item => ({
                         ...item,
-                        mes: normalizarMes(item.mes)
+                        mes: normalizarMes(item.mes),
+                        feedback: item.feedback || "-" 
                     }));
 
                     document.getElementById('view-adm').classList.add('active');
@@ -215,30 +212,16 @@
                     document.getElementById('h-cliente').value = res.nome;
                     document.getElementById('h-email').value = user;
                     document.getElementById('h-nome').value = res.nome;
-
                     const selContrato = document.getElementById('select-contrato');
                     selContrato.innerHTML = '<option value="">Selecione o contrato...</option>';
-
                     res.contratos.forEach(codAutorizado => {
                         const info = dbContratosGlobal.find(db => db.numero.toString() === codAutorizado.toString());
-                        if(info) {
-                            selContrato.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
-                        }
+                        if(info) selContrato.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
                     });
-
-                    if(res.contratos.length > 0) {
-                        const primeiraExibicao = selContrato.options[1]?.value;
-                        if(primeiraExibicao) vincularCodigo(primeiraExibicao);
-                    }
+                    if(res.contratos.length > 0 && selContrato.options[1]) vincularCodigo(selContrato.options[1].value);
                 }
-            } else { 
-                alert("Acesso negado."); 
-                btn.innerText = "Entrar"; btn.disabled = false;
-            }
-        }).catch(err => {
-            alert("Erro de conexão.");
-            btn.innerText = "Entrar"; btn.disabled = false;
-        });
+            } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
+        }).catch(() => { alert("Erro de conexão."); btn.innerText = "Entrar"; btn.disabled = false; });
     }
 
     function vincularCodigo(nomeExibicao) {
@@ -257,76 +240,59 @@
     }
 
     function aplicarFiltros() {
-        const m = document.getElementById('f-mes').value;
-        const u = document.getElementById('f-unidade').value;
-        const cl = document.getElementById('f-cliente').value;
-        const ct = document.getElementById('f-contrato').value;
+        const m = document.getElementById('f-mes').value, u = document.getElementById('f-unidade').value,
+              cl = document.getElementById('f-cliente').value, ct = document.getElementById('f-contrato').value;
 
         const filtrados = dadosBrutos.filter(d => 
             (m === "Todos" || d.mes === m) && (u === "Todas" || d.unidade === u) &&
             (cl === "Todos" || d.cliente === cl) && (ct === "Todos" || d.contrato === ct)
         );
 
-        const t = filtrados.length;
-        const p = filtrados.filter(x => x.nota >= 9).length;
-        const det = filtrados.filter(x => x.nota <= 6).length;
+        const t = filtrados.length, p = filtrados.filter(x => x.nota >= 9).length, det = filtrados.filter(x => x.nota <= 6).length;
         const nps = t > 0 ? Math.round(((p - det) / t) * 100) : 0;
 
         document.getElementById('m-total').innerText = t;
         document.getElementById('m-promotores').innerText = p;
         document.getElementById('m-detratores').innerText = det;
         document.getElementById('m-nps').innerText = nps;
-        
-        const cor = nps >= 75 ? '#007bff' : nps >= 50 ? '#28a745' : nps >= 0 ? '#FF8C00' : '#ED1C24';
-        document.getElementById('card-nps-total').style.backgroundColor = cor;
+        document.getElementById('card-nps-total').style.backgroundColor = nps >= 75 ? '#007bff' : nps >= 50 ? '#28a745' : nps >= 0 ? '#FF8C00' : '#ED1C24';
 
         renderizarGrafico(filtrados);
+        renderizarTabela(filtrados);
+    }
+
+    function renderizarTabela(dados) {
+        const tbody = document.querySelector('#tabela-historico tbody');
+        tbody.innerHTML = "";
+        // Inverte para mostrar os mais recentes no topo
+        [...dados].reverse().forEach(d => {
+            const corNota = d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : '#FFCC00';
+            const row = `<tr>
+                <td>${d.mes}</td>
+                <td><strong>${d.cliente}</strong><br><span style="opacity:0.6">${d.contrato}</span></td>
+                <td><span class="tag-nota" style="background:${corNota}">${d.nota}</span></td>
+                <td style="max-width:300px; font-style:italic">"${d.feedback}"</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+        if(dados.length === 0) tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:30px; opacity:0.5'>Nenhum registro encontrado.</td></tr>";
     }
 
     function renderizarGrafico(dados) {
         const mesesMestre = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26", "Abr 26", "Mai 26", "Jun 26", "Jul 26", "Ago 26", "Set 26", "Out 26", "Nov 26", "Dez 26"];
         const labels = mesesMestre.filter(m => dadosBrutos.some(d => d.mes === m));
-        
         const scores = labels.map(m => {
             const dMes = dados.filter(x => x.mes === m);
             if(dMes.length === 0) return 0;
-            const p = dMes.filter(x => x.nota >= 9).length;
-            const det = dMes.filter(x => x.nota <= 6).length;
+            const p = dMes.filter(x => x.nota >= 9).length, det = dMes.filter(x => x.nota <= 6).length;
             return Math.round(((p - det) / dMes.length) * 100);
         });
-
         if(meuGrafico) meuGrafico.destroy();
         Chart.register(ChartDataLabels);
-
         meuGrafico = new Chart(document.getElementById('npsChart'), {
             type: 'bar',
-            data: { 
-                labels: labels, 
-                datasets: [{ 
-                    data: scores, 
-                    backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), 
-                    borderRadius: 5 
-                }] 
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { 
-                    legend: { display: false },
-                    datalabels: {
-                        color: '#fff',
-                        anchor: 'end',
-                        align: 'top',
-                        offset: -2,
-                        font: { weight: 'bold', size: 10 },
-                        formatter: (value) => value
-                    }
-                }, 
-                scales: { 
-                    y: { beginAtZero: true, min: -100, max: 120, ticks: { color: '#fff' } }, 
-                    x: { ticks: { color: '#fff' } } 
-                } 
-            }
+            data: { labels: labels, datasets: [{ data: scores, backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), borderRadius: 5 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#fff', anchor: 'end', align: 'top', offset: -2, font: { weight: 'bold', size: 10 } } }, scales: { y: { beginAtZero: true, min: -100, max: 120, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
         });
     }
 

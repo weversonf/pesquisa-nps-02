@@ -53,7 +53,6 @@
         .nps-item input { display: none; }
         .nps-item label { display: flex; align-items: center; justify-content: center; height: 35px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; font-size: 11px; border: 1px solid var(--glass-border); transition: 0.3s; }
         
-        /* Classes dinâmicas para as cores das notas no formulário */
         .nps-item label.detrator-active { background-color: var(--vermelho-nps) !important; color: white; border-color: #fff; transform: scale(1.1); font-weight: bold; }
         .nps-item label.neutro-active { background-color: #FFCC00 !important; color: black; border-color: #fff; transform: scale(1.1); font-weight: bold; }
         .nps-item label.promotor-active { background-color: var(--verde-nps) !important; color: white; border-color: #fff; transform: scale(1.1); font-weight: bold; }
@@ -115,8 +114,8 @@
                 <label>Contrato</label>
                 <select id="select-contrato" name="Nome do Contrato" onchange="vincularCodigo(this.value)" required></select>
                 
-                <label>Número do Contrato</label>
-                <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.5;">
+                <label>Número do Contrato (Referencial)</label>
+                <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);">
 
                 <label>Sua Nota (0 a 10)</label>
                 <div class="nps-container">
@@ -150,15 +149,11 @@
     let dbContratosGlobal = [];
     let meuGrafico = null;
 
-    // Função para colorir a nota no formulário do cliente
     function colorirNota(input) {
         const nota = parseInt(input.value);
         const labels = document.querySelectorAll('.nps-item label');
-        
         labels.forEach(l => l.classList.remove('detrator-active', 'neutro-active', 'promotor-active'));
-
         const labelAtivo = document.querySelector(`label[for="${input.id}"]`);
-        
         if (nota >= 0 && nota <= 6) labelAtivo.classList.add('detrator-active');
         else if (nota >= 7 && nota <= 8) labelAtivo.classList.add('neutro-active');
         else if (nota >= 9 && nota <= 10) labelAtivo.classList.add('promotor-active');
@@ -176,13 +171,16 @@
         const pass = document.getElementById('user-pass').value;
         const btn = document.getElementById('btnLogin');
         if(!user || !pass) return alert("Preencha os campos.");
-        
         btn.innerText = "VALIDANDO..."; btn.disabled = true;
 
         fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
         .then(res => res.json()).then(res => {
             if(res.result === "success") {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                
+                // Salva o banco global de contratos formatados enviado pelo script
+                dbContratosGlobal = res.metrics ? res.metrics.listaContratos : [];
+
                 if(res.tipo === "ADM") {
                     dadosBrutos = res.metrics.baseDados;
                     document.getElementById('view-adm').classList.add('active');
@@ -197,9 +195,22 @@
                     document.getElementById('h-cliente').value = res.nome;
                     document.getElementById('h-email').value = user;
                     document.getElementById('h-nome').value = res.nome;
-                    dbContratosGlobal = res.metrics ? res.metrics.listaContratos : [];
-                    document.getElementById('select-contrato').innerHTML = res.contratos.map(c => `<option value="${c.trim()}">${c.trim()}</option>`).join('');
-                    if(res.contratos.length > 0) vincularCodigo(res.contratos[0].trim());
+
+                    const selContrato = document.getElementById('select-contrato');
+                    selContrato.innerHTML = '<option value="">Selecione o contrato...</option>';
+
+                    // Mapeia os códigos permitidos do usuário para os nomes de exibição longos
+                    res.contratos.forEach(codAutorizado => {
+                        const info = dbContratosGlobal.find(db => db.numero.toString() === codAutorizado.toString());
+                        if(info) {
+                            selContrato.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
+                        }
+                    });
+
+                    if(res.contratos.length > 0) {
+                        const primeiraExibicao = selContrato.options[1]?.value;
+                        if(primeiraExibicao) vincularCodigo(primeiraExibicao);
+                    }
                 }
             } else { 
                 alert("Acesso negado."); 
@@ -211,9 +222,13 @@
         });
     }
 
-    function vincularCodigo(nome) {
-        const contrato = dbContratosGlobal.find(c => c.nome === nome);
-        if(contrato) document.getElementById('input-num-contrato').value = contrato.numero;
+    function vincularCodigo(nomeExibicao) {
+        const contrato = dbContratosGlobal.find(c => c.exibicao === nomeExibicao);
+        if(contrato) {
+            document.getElementById('input-num-contrato').value = contrato.numero;
+            // Atualiza os campos ocultos se necessário
+            document.getElementById('h-cliente').value = contrato.cliente;
+        }
     }
 
     function popularSelect(id, lista) {
@@ -289,12 +304,7 @@
                     }
                 }, 
                 scales: { 
-                    y: { 
-                        beginAtZero: true, 
-                        min: -100, 
-                        max: 120, 
-                        ticks: { color: '#fff' } 
-                    }, 
+                    y: { beginAtZero: true, min: -100, max: 120, ticks: { color: '#fff' } }, 
                     x: { ticks: { color: '#fff' } } 
                 } 
             }

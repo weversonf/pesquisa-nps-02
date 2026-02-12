@@ -21,15 +21,11 @@
         .view.active { display: block; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .card { background: var(--glass); backdrop-filter: blur(15px); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
-        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
         
         select, input, textarea {
-            background: rgba(255, 255, 255, 0.1); 
-            border: 1px solid var(--glass-border); 
-            padding: 10px; border-radius: 8px; color: #cccccc; width: 100%; outline: none; font-size: 11px; margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: #cccccc; width: 100%; outline: none; font-size: 11px; margin-bottom: 20px;
         }
-        
-        #btnLogin { margin-top: 10px; }
         select option { background: var(--azul-profundo); color: #cccccc; }
         label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
         
@@ -38,19 +34,20 @@
         .card-metric h2 { font-size: 24px; font-weight: 900; }
         
         .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        
+        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; }
+
         .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
         table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
         th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
-        td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; vertical-align: middle; }
+        td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; }
         .tag-nota { padding: 4px 8px; border-radius: 4px; font-weight: 900; color: white; display: inline-block; text-align: center; min-width: 25px; }
 
         .nps-container { display: flex; justify-content: space-between; gap: 4px; margin: 10px 0 20px; }
         .nps-item input { display: none; }
         .nps-item label { display: flex; align-items: center; justify-content: center; height: 35px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; font-size: 11px; border: 1px solid var(--glass-border); transition: 0.3s; }
-        .nps-item label.detrator-active { background-color: var(--vermelho-nps) !important; color: white; border-color: #fff; transform: scale(1.1); font-weight: bold; }
-        .nps-item label.neutro-active { background-color: #FFCC00 !important; color: black; border-color: #fff; transform: scale(1.1); font-weight: bold; }
-        .nps-item label.promotor-active { background-color: var(--verde-nps) !important; color: white; border-color: #fff; transform: scale(1.1); font-weight: bold; }
+        .nps-item label.detrator-active { background-color: var(--vermelho-nps) !important; color: white; }
+        .nps-item label.neutro-active { background-color: #FFCC00 !important; color: black; }
+        .nps-item label.promotor-active { background-color: var(--verde-nps) !important; color: white; }
 
         footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
     </style>
@@ -59,30 +56,33 @@
 
 <header>
     <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" style="max-width: 120px;">
-    <div style="font-size: 0.6rem; letter-spacing: 3px; opacity: 0.6; margin-top: 5px;">PESQUISA NPS | MAKRO ENGENHARIA</div>
+    <div style="font-size: 0.6rem; letter-spacing: 3px; opacity: 0.6; margin-top: 5px;">PAINEL DE PERFORMANCE | MAKRO ENGENHARIA</div>
 </header>
 
 <div class="container">
     <div class="view active" id="view-login">
         <div class="card" style="max-width: 350px; margin: 50px auto;">
-            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Acesso Painel NPS</h2>
+            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Acesso BI NPS</h2>
             <input type="text" id="user-login" placeholder="E-mail corporativo">
             <input type="password" id="user-pass" placeholder="Senha">
             <button class="btn" id="btnLogin" onclick="autenticar()">Entrar</button>
         </div>
     </div>
 
-    <div class="view" id="view-adm">
+    <div class="view" id="view-dashboard">
         <div class="card">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h3 id="adm-welcome" style="font-size: 0.9rem;">Painel de Indicadores</h3>
-                <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="welcome-msg" style="font-size: 0.9rem;">Painel de Indicadores</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn btn-outline" style="display:none;">+ AVALIAR</button>
+                    <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
+                </div>
             </div>
             
             <div class="filter-group">
                 <div><label>Mês</label><select id="f-mes" onchange="acionarFiltros()"></select></div>
                 <div><label>Unidade</label><select id="f-unidade" onchange="acionarFiltros()"></select></div>
-                <div><label>Cliente</label><select id="f-cliente" onchange="acionarFiltros()"></select></div>
+                <div id="div-f-cliente"><label>Cliente</label><select id="f-cliente" onchange="acionarFiltros()"></select></div>
                 <div><label>Contrato</label><select id="f-contrato" onchange="acionarFiltros()"></select></div>
             </div>
 
@@ -95,32 +95,26 @@
 
             <div style="height: 250px; margin-bottom: 30px;"><canvas id="npsChart"></canvas></div>
 
-            <h4 style="font-size: 10px; text-transform: uppercase; margin-bottom: 10px; color: var(--vermelho-nps);">Histórico de Feedbacks</h4>
+            <h4 style="font-size: 10px; text-transform: uppercase; margin-bottom: 10px; color: var(--vermelho-nps);">Histórico Recente</h4>
             <div class="table-wrapper">
                 <table id="tabela-historico">
-                    <thead>
-                        <tr>
-                            <th>Mês</th>
-                            <th>Cliente / Contrato</th>
-                            <th>Nota</th>
-                            <th>Feedback</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Mês</th><th>Cliente / Contrato</th><th>Nota</th><th>Feedback</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="view" id="view-cliente">
+    <div class="view" id="view-formulario">
         <div class="card">
-            <h2 id="msg-cliente">Olá!</h2>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h2>Nova Avaliação</h2>
+                <button onclick="voltarDash()" class="btn btn-outline">VOLTAR</button>
+            </div>
             <form id="pesquisaMakro">
                 <label>Mês de Referência</label>
                 <select name="Mes Referente" required>
-                    <option value="Jan 26">Jan 26</option>
-                    <option value="Fev 26" selected>Fev 26</option>
-                    <option value="Mar 26">Mar 26</option>
+                    <option value="Jan 26">Jan 26</option><option value="Fev 26" selected>Fev 26</option><option value="Mar 26">Mar 26</option>
                 </select>
                 <label>Contrato</label>
                 <select id="select-contrato" name="Nome do Contrato" onchange="vincularCodigo(this.value)" required></select>
@@ -128,14 +122,14 @@
                 <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);">
                 <label>Sua Nota (0 a 10)</label>
                 <div class="nps-container">
-                    <script>
-                        for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)"><label for="n${i}">${i}</label></div>`);
-                    </script>
+                    <script>for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)"><label for="n${i}">${i}</label></div>`);</script>
                 </div>
                 <label>Feedback</label>
                 <textarea name="Feedback" rows="3" placeholder="Sua opinião..."></textarea>
-                <input type="hidden" name="Nome do Cliente" id="h-cliente"><input type="hidden" name="Email do Responsável" id="h-email"><input type="hidden" name="Nome do Responsável" id="h-nome">
-                <button type="submit" class="btn" id="btnSubmit" style="margin-top: 15px;">Enviar Avaliação</button>
+                <input type="hidden" name="Nome do Cliente" id="h-cliente">
+                <input type="hidden" name="Email do Responsável" id="h-email">
+                <input type="hidden" name="Nome do Responsável" id="h-nome">
+                <button type="submit" class="btn" id="btnSubmit">Enviar Avaliação</button>
             </form>
         </div>
     </div>
@@ -147,11 +141,13 @@
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
     let dadosBrutos = [];
     let dbContratosGlobal = [];
+    let meusContratosNomes = [];
     let meuGrafico = null;
+    let userTipo = "";
 
     function normalizarMes(valor) {
         if (!valor) return "S/M";
-        if (typeof valor === 'string' && valor.length === 6 && valor.includes(" ")) return valor;
+        if (typeof valor === 'string' && valor.length === 6) return valor;
         const data = new Date(valor);
         if (!isNaN(data.getTime())) {
             const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -170,6 +166,16 @@
         else if (nota >= 9 && nota <= 10) labelAtivo.classList.add('promotor-active');
     }
 
+    function abrirFormulario() {
+        document.getElementById('view-dashboard').classList.remove('active');
+        document.getElementById('view-formulario').classList.add('active');
+    }
+
+    function voltarDash() {
+        document.getElementById('view-formulario').classList.remove('active');
+        document.getElementById('view-dashboard').classList.add('active');
+    }
+
     document.addEventListener('keypress', e => { if (e.key === 'Enter' && document.querySelector('.view.active').id === 'view-login') autenticar(); });
 
     function autenticar() {
@@ -180,40 +186,44 @@
         fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
         .then(res => res.json()).then(res => {
             if(res.result === "success") {
-                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                dbContratosGlobal = res.metrics ? res.metrics.listaContratos : [];
+                userTipo = res.tipo;
+                dbContratosGlobal = res.metrics.listaContratos;
+                meusContratosNomes = res.contratos; // Nomes dos contratos autorizados (Coluna A)
+                
+                document.getElementById('view-login').classList.remove('active');
+                document.getElementById('view-dashboard').classList.add('active');
+                document.getElementById('welcome-msg').innerText = `Olá, ${res.nome}`;
+                
+                // Configura campos ocultos do form
+                document.getElementById('h-email').value = user;
+                document.getElementById('h-nome').value = res.nome;
 
-                if(res.tipo === "ADM") {
-                    dadosBrutos = res.metrics.baseDados.map(item => ({...item, mes: normalizarMes(item.mes), feedback: item.feedback || "-"}));
-                    document.getElementById('view-adm').classList.add('active');
-                    
-                    // Inicializa os filtros pela primeira vez
-                    atualizarOpcoesFiltros(); 
-                    aplicarFiltros();
+                // Popula Select de Contratos do Formulário
+                const selC = document.getElementById('select-contrato');
+                selC.innerHTML = '<option value="">Selecione...</option>';
+                meusContratosNomes.forEach(nomeOriginal => {
+                    const info = dbContratosGlobal.find(db => db.nomeOriginal === nomeOriginal.trim());
+                    if(info) selC.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
+                });
+
+                // Se não for ADM, filtra a base de dados para mostrar apenas os contratos do usuário
+                let baseCompleta = res.metrics.baseDados || [];
+                if(userTipo !== "ADM") {
+                    dadosBrutos = baseCompleta.filter(d => meusContratosNomes.includes(d.contrato.trim())).map(item => ({...item, mes: normalizarMes(item.mes)}));
+                    document.getElementById('btn-nova-pesquisa').style.display = "block";
+                    document.getElementById('div-f-cliente').style.display = "none"; // Cliente geralmente é fixo para o usuário
                 } else {
-                    document.getElementById('view-cliente').classList.add('active');
-                    document.getElementById('msg-cliente').innerText = `Olá, ${res.nome}!`;
-                    document.getElementById('h-cliente').value = res.nome;
-                    document.getElementById('h-email').value = user;
-                    document.getElementById('h-nome').value = res.nome;
-                    const sel = document.getElementById('select-contrato');
-                    sel.innerHTML = '<option value="">Selecione o contrato...</option>';
-                    res.contratos.forEach(cod => {
-                        const info = dbContratosGlobal.find(db => db.numero.toString() === cod.toString());
-                        if(info) sel.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
-                    });
-                    if(res.contratos.length > 0 && sel.options[1]) vincularCodigo(sel.options[1].value);
+                    dadosBrutos = baseCompleta.map(item => ({...item, mes: normalizarMes(item.mes)}));
                 }
+
+                atualizarOpcoesFiltros();
+                aplicarFiltros();
             } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
-        }).catch(() => { alert("Erro de conexão."); btn.innerText = "Entrar"; btn.disabled = false; });
+        }).catch(() => { alert("Erro na conexão"); btn.innerText = "Entrar"; btn.disabled = false; });
     }
 
-    function acionarFiltros() {
-        atualizarOpcoesFiltros();
-        aplicarFiltros();
-    }
+    function acionarFiltros() { atualizarOpcoesFiltros(); aplicarFiltros(); }
 
-    // NOVA LÓGICA: Atualiza as opções dos filtros baseada na seleção atual
     function atualizarOpcoesFiltros() {
         const selMes = document.getElementById('f-mes'), selUnid = document.getElementById('f-unidade'),
               selCli = document.getElementById('f-cliente'), selCont = document.getElementById('f-contrato');
@@ -221,44 +231,23 @@
         const valMes = selMes.value || "Todos", valUnid = selUnid.value || "Todas",
               valCli = selCli.value || "Todos", valCont = selCont.value || "Todos";
 
-        // Filtra os dados brutos para ver o que sobra baseado no que JÁ está selecionado
-        const disponiveis = dadosBrutos.filter(d => 
-            (valMes === "Todos" || d.mes === valMes) &&
-            (valUnid === "Todas" || d.unidade === valUnid) &&
-            (valCli === "Todos" || d.cliente === valCli) &&
-            (valCont === "Todos" || d.contrato === valCont)
-        );
-
-        // Se nada estiver filtrado, usa a base toda para popular os selects
-        const baseParaSelects = disponiveis.length > 0 ? disponiveis : dadosBrutos;
-
-        // Funçâo auxiliar para popular sem perder a seleção
         const popular = (el, lista, padrao, atual) => {
-            const itens = [...new Set(lista.map(d => d))].sort();
+            const itens = [...new Set(lista)].sort();
             let html = `<option value="${padrao}">${padrao}</option>`;
             itens.forEach(i => { if(i) html += `<option value="${i}" ${i === atual ? 'selected' : ''}>${i}</option>`; });
             el.innerHTML = html;
         };
 
-        // Popular campos (exceto o próprio que foi clicado, para não fechar a lista)
         popular(selMes, dadosBrutos.map(d => d.mes), "Todos", valMes);
         popular(selUnid, dadosBrutos.map(d => d.unidade), "Todas", valUnid);
+        popular(selCli, dadosBrutos.map(d => d.cliente), "Todos", valCli);
         
-        // Estes filtros abaixo dependem da Unidade e Cliente selecionados
-        const filtradosParaCliECont = dadosBrutos.filter(d => 
+        const filtradosParaCont = dadosBrutos.filter(d => 
             (valMes === "Todos" || d.mes === valMes) &&
-            (valUnid === "Todas" || d.unidade === valUnid)
+            (valUnid === "Todas" || d.unidade === valUnid) &&
+            (valCli === "Todos" || d.cliente === valCli)
         );
-
-        popular(selCli, filtradosParaCliECont.map(d => d.cliente), "Todos", valCli);
-        
-        const filtradosParaCont = filtradosParaCliECont.filter(d => (valCli === "Todos" || d.cliente === valCli));
         popular(selCont, filtradosParaCont.map(d => d.contrato), "Todos", valCont);
-    }
-
-    function vincularCodigo(exibicao) {
-        const c = dbContratosGlobal.find(x => x.exibicao === exibicao);
-        if(c) { document.getElementById('input-num-contrato').value = c.numero; document.getElementById('h-cliente').value = c.cliente; }
     }
 
     function aplicarFiltros() {
@@ -289,9 +278,8 @@
         [...dados].reverse().forEach(d => {
             const cor = d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : '#FFCC00';
             tbody.innerHTML += `<tr><td>${d.mes}</td><td><strong>${d.cliente}</strong><br><span style="opacity:0.6">${d.contrato}</span></td>
-                <td><span class="tag-nota" style="background:${cor}">${d.nota}</span></td><td style="max-width:300px; font-style:italic">"${d.feedback}"</td></tr>`;
+                <td><span class="tag-nota" style="background:${cor}">${d.nota}</span></td><td style="max-width:300px; font-style:italic">"${d.feedback || '-'}"</td></tr>`;
         });
-        if(dados.length === 0) tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:30px; opacity:0.5'>Nenhum registro encontrado.</td></tr>";
     }
 
     function renderizarGrafico(dados) {
@@ -310,6 +298,11 @@
             data: { labels: labels, datasets: [{ data: scores, backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), borderRadius: 5 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#fff', anchor: 'end', align: 'top', offset: -2, font: { weight: 'bold', size: 10 } } }, scales: { y: { beginAtZero: true, min: -100, max: 120, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
         });
+    }
+
+    function vincularCodigo(exibicao) {
+        const c = dbContratosGlobal.find(x => x.exibicao === exibicao);
+        if(c) { document.getElementById('input-num-contrato').value = c.numero; document.getElementById('h-cliente').value = c.cliente; }
     }
 
     document.getElementById('pesquisaMakro').addEventListener('submit', e => {

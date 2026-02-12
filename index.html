@@ -39,7 +39,6 @@
         
         .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
         
-        /* Estilos da Tabela de Histórico */
         .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
         table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
         th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
@@ -81,10 +80,10 @@
             </div>
             
             <div class="filter-group">
-                <div><label>Mês</label><select id="f-mes" onchange="aplicarFiltros()"><option value="Todos">Todos</option></select></div>
-                <div><label>Unidade</label><select id="f-unidade" onchange="aplicarFiltros()"><option value="Todas">Todas</option></select></div>
-                <div><label>Cliente</label><select id="f-cliente" onchange="aplicarFiltros()"><option value="Todos">Todos</option></select></div>
-                <div><label>Contrato</label><select id="f-contrato" onchange="aplicarFiltros()"><option value="Todos">Todos</option></select></div>
+                <div><label>Mês</label><select id="f-mes" onchange="acionarFiltros()"></select></div>
+                <div><label>Unidade</label><select id="f-unidade" onchange="acionarFiltros()"></select></div>
+                <div><label>Cliente</label><select id="f-cliente" onchange="acionarFiltros()"></select></div>
+                <div><label>Contrato</label><select id="f-contrato" onchange="acionarFiltros()"></select></div>
             </div>
 
             <div class="grid-metrics">
@@ -130,12 +129,7 @@
                 <label>Sua Nota (0 a 10)</label>
                 <div class="nps-container">
                     <script>
-                        for(let i=0;i<=10;i++) {
-                            document.write(`<div class="nps-item" style="flex:1">
-                                <input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)">
-                                <label for="n${i}">${i}</label>
-                            </div>`);
-                        }
+                        for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)"><label for="n${i}">${i}</label></div>`);
                     </script>
                 </div>
                 <label>Feedback</label>
@@ -160,8 +154,8 @@
         if (typeof valor === 'string' && valor.length === 6 && valor.includes(" ")) return valor;
         const data = new Date(valor);
         if (!isNaN(data.getTime())) {
-            const mesesMestrePuros = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-            return `${mesesMestrePuros[data.getMonth()]} ${data.getFullYear().toString().substring(2)}`;
+            const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            return `${meses[data.getMonth()]} ${data.getFullYear().toString().substring(2)}`;
         }
         return valor.toString();
     }
@@ -176,14 +170,10 @@
         else if (nota >= 9 && nota <= 10) labelAtivo.classList.add('promotor-active');
     }
 
-    document.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter' && document.querySelector('.view.active').id === 'view-login') autenticar();
-    });
+    document.addEventListener('keypress', e => { if (e.key === 'Enter' && document.querySelector('.view.active').id === 'view-login') autenticar(); });
 
     function autenticar() {
-        const user = document.getElementById('user-login').value;
-        const pass = document.getElementById('user-pass').value;
-        const btn = document.getElementById('btnLogin');
+        const user = document.getElementById('user-login').value, pass = document.getElementById('user-pass').value, btn = document.getElementById('btnLogin');
         if(!user || !pass) return alert("Preencha os campos.");
         btn.innerText = "VALIDANDO..."; btn.disabled = true;
 
@@ -194,17 +184,11 @@
                 dbContratosGlobal = res.metrics ? res.metrics.listaContratos : [];
 
                 if(res.tipo === "ADM") {
-                    dadosBrutos = res.metrics.baseDados.map(item => ({
-                        ...item,
-                        mes: normalizarMes(item.mes),
-                        feedback: item.feedback || "-" 
-                    }));
-
+                    dadosBrutos = res.metrics.baseDados.map(item => ({...item, mes: normalizarMes(item.mes), feedback: item.feedback || "-"}));
                     document.getElementById('view-adm').classList.add('active');
-                    popularSelect('f-mes', [...new Set(dadosBrutos.map(d => d.mes))]);
-                    popularSelect('f-unidade', res.metrics.unidades);
-                    popularSelect('f-cliente', res.metrics.clientes);
-                    popularSelect('f-contrato', [...new Set(dadosBrutos.map(d => d.contrato))]);
+                    
+                    // Inicializa os filtros pela primeira vez
+                    atualizarOpcoesFiltros(); 
                     aplicarFiltros();
                 } else {
                     document.getElementById('view-cliente').classList.add('active');
@@ -212,31 +196,69 @@
                     document.getElementById('h-cliente').value = res.nome;
                     document.getElementById('h-email').value = user;
                     document.getElementById('h-nome').value = res.nome;
-                    const selContrato = document.getElementById('select-contrato');
-                    selContrato.innerHTML = '<option value="">Selecione o contrato...</option>';
-                    res.contratos.forEach(codAutorizado => {
-                        const info = dbContratosGlobal.find(db => db.numero.toString() === codAutorizado.toString());
-                        if(info) selContrato.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
+                    const sel = document.getElementById('select-contrato');
+                    sel.innerHTML = '<option value="">Selecione o contrato...</option>';
+                    res.contratos.forEach(cod => {
+                        const info = dbContratosGlobal.find(db => db.numero.toString() === cod.toString());
+                        if(info) sel.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
                     });
-                    if(res.contratos.length > 0 && selContrato.options[1]) vincularCodigo(selContrato.options[1].value);
+                    if(res.contratos.length > 0 && sel.options[1]) vincularCodigo(sel.options[1].value);
                 }
             } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
         }).catch(() => { alert("Erro de conexão."); btn.innerText = "Entrar"; btn.disabled = false; });
     }
 
-    function vincularCodigo(nomeExibicao) {
-        const contrato = dbContratosGlobal.find(c => c.exibicao === nomeExibicao);
-        if(contrato) {
-            document.getElementById('input-num-contrato').value = contrato.numero;
-            document.getElementById('h-cliente').value = contrato.cliente;
-        }
+    function acionarFiltros() {
+        atualizarOpcoesFiltros();
+        aplicarFiltros();
     }
 
-    function popularSelect(id, lista) {
-        const s = document.getElementById(id);
-        const prefixo = (id === 'f-unidade') ? 'Todas' : 'Todos';
-        s.innerHTML = `<option value="${prefixo}">${prefixo}</option>`;
-        lista.sort().forEach(item => { if(item) s.innerHTML += `<option value="${item}">${item}</option>`; });
+    // NOVA LÓGICA: Atualiza as opções dos filtros baseada na seleção atual
+    function atualizarOpcoesFiltros() {
+        const selMes = document.getElementById('f-mes'), selUnid = document.getElementById('f-unidade'),
+              selCli = document.getElementById('f-cliente'), selCont = document.getElementById('f-contrato');
+
+        const valMes = selMes.value || "Todos", valUnid = selUnid.value || "Todas",
+              valCli = selCli.value || "Todos", valCont = selCont.value || "Todos";
+
+        // Filtra os dados brutos para ver o que sobra baseado no que JÁ está selecionado
+        const disponiveis = dadosBrutos.filter(d => 
+            (valMes === "Todos" || d.mes === valMes) &&
+            (valUnid === "Todas" || d.unidade === valUnid) &&
+            (valCli === "Todos" || d.cliente === valCli) &&
+            (valCont === "Todos" || d.contrato === valCont)
+        );
+
+        // Se nada estiver filtrado, usa a base toda para popular os selects
+        const baseParaSelects = disponiveis.length > 0 ? disponiveis : dadosBrutos;
+
+        // Funçâo auxiliar para popular sem perder a seleção
+        const popular = (el, lista, padrao, atual) => {
+            const itens = [...new Set(lista.map(d => d))].sort();
+            let html = `<option value="${padrao}">${padrao}</option>`;
+            itens.forEach(i => { if(i) html += `<option value="${i}" ${i === atual ? 'selected' : ''}>${i}</option>`; });
+            el.innerHTML = html;
+        };
+
+        // Popular campos (exceto o próprio que foi clicado, para não fechar a lista)
+        popular(selMes, dadosBrutos.map(d => d.mes), "Todos", valMes);
+        popular(selUnid, dadosBrutos.map(d => d.unidade), "Todas", valUnid);
+        
+        // Estes filtros abaixo dependem da Unidade e Cliente selecionados
+        const filtradosParaCliECont = dadosBrutos.filter(d => 
+            (valMes === "Todos" || d.mes === valMes) &&
+            (valUnid === "Todas" || d.unidade === valUnid)
+        );
+
+        popular(selCli, filtradosParaCliECont.map(d => d.cliente), "Todos", valCli);
+        
+        const filtradosParaCont = filtradosParaCliECont.filter(d => (valCli === "Todos" || d.cliente === valCli));
+        popular(selCont, filtradosParaCont.map(d => d.contrato), "Todos", valCont);
+    }
+
+    function vincularCodigo(exibicao) {
+        const c = dbContratosGlobal.find(x => x.exibicao === exibicao);
+        if(c) { document.getElementById('input-num-contrato').value = c.numero; document.getElementById('h-cliente').value = c.cliente; }
     }
 
     function aplicarFiltros() {
@@ -264,16 +286,10 @@
     function renderizarTabela(dados) {
         const tbody = document.querySelector('#tabela-historico tbody');
         tbody.innerHTML = "";
-        // Inverte para mostrar os mais recentes no topo
         [...dados].reverse().forEach(d => {
-            const corNota = d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : '#FFCC00';
-            const row = `<tr>
-                <td>${d.mes}</td>
-                <td><strong>${d.cliente}</strong><br><span style="opacity:0.6">${d.contrato}</span></td>
-                <td><span class="tag-nota" style="background:${corNota}">${d.nota}</span></td>
-                <td style="max-width:300px; font-style:italic">"${d.feedback}"</td>
-            </tr>`;
-            tbody.innerHTML += row;
+            const cor = d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : '#FFCC00';
+            tbody.innerHTML += `<tr><td>${d.mes}</td><td><strong>${d.cliente}</strong><br><span style="opacity:0.6">${d.contrato}</span></td>
+                <td><span class="tag-nota" style="background:${cor}">${d.nota}</span></td><td style="max-width:300px; font-style:italic">"${d.feedback}"</td></tr>`;
         });
         if(dados.length === 0) tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:30px; opacity:0.5'>Nenhum registro encontrado.</td></tr>";
     }

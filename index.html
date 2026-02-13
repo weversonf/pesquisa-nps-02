@@ -1,384 +1,413 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema NPS | Makro Engenharia</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        :root {
-            --azul-profundo: #011f42; --azul-makro: #023F88;
-            --vermelho-nps: #ED1C24; --laranja-nps: #FF8C00; --verde-nps: #28a745; --azul-nps: #007bff;
-            --branco: #FFFFFF; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
-        body { background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo)); background-attachment: fixed; color: var(--branco); min-height: 100vh; }
-        header { padding: 1.5rem; text-align: center; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--glass-border); }
-        .container { padding: 1.5rem; max-width: 950px; margin: 0 auto; }
-        .view { display: none; }
-        .view.active { display: block; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
-        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        
-        select, input, textarea {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: #cccccc; width: 100%; outline: none; font-size: 11px; margin-bottom: 20px;
-        }
-        select option { background: var(--azul-profundo); color: #cccccc; }
-        label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
-        
-        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
-        .card-metric h2 { font-size: 24px; font-weight: 900; }
-        
-        .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-        .btn-excel { border-color: #28a745; color: #28a745; }
-        .btn-config { border-color: #aaa; color: #aaa; }
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema NPS | Makro Engenharia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --azul-profundo: #011f42; --azul-makro: #023F88;
+            --vermelho-nps: #ED1C24; --laranja-nps: #FF8C00; --verde-nps: #28a745; --azul-nps: #007bff;
+            --branco: #FFFFFF; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        body { background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo)); background-attachment: fixed; color: var(--branco); min-height: 100vh; }
+        header { padding: 1.5rem; text-align: center; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--glass-border); }
+        .container { padding: 1.5rem; max-width: 950px; margin: 0 auto; }
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
+        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        
+        select, input, textarea {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: #cccccc; width: 100%; outline: none; font-size: 11px; margin-bottom: 20px;
+        }
+        select option { background: var(--azul-profundo); color: #cccccc; }
+        label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
+        
+        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
+        .card-metric h2 { font-size: 24px; font-weight: 900; }
+        
+        .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-excel { border-color: #28a745; color: #28a745; }
+        .btn-config { border-color: #aaa; color: #aaa; }
+        .btn-usuarios { border-color: #007bff; color: #007bff; }
 
-        .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
-        th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
-        td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; }
-        .tag-nota { padding: 4px 8px; border-radius: 4px; font-weight: 900; color: white; display: inline-block; text-align: center; min-width: 25px; }
+        .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
+        th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
+        td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; }
+        .tag-nota { padding: 4px 8px; border-radius: 4px; font-weight: 900; color: white; display: inline-block; text-align: center; min-width: 25px; }
 
-        footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
-    </style>
+        footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
+    </style>
 </head>
 <body>
 
 <header>
-    <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" style="max-width: 120px;">
-    <div style="font-size: 0.6rem; letter-spacing: 3px; opacity: 0.6; margin-top: 5px;">PAINEL NPS | MAKRO ENGENHARIA</div>
+    <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" style="max-width: 120px;">
+    <div style="font-size: 0.6rem; letter-spacing: 3px; opacity: 0.6; margin-top: 5px;">PAINEL NPS | MAKRO ENGENHARIA</div>
 </header>
 
 <div class="container">
-    <div class="view active" id="view-login">
-        <div class="card" style="max-width: 350px; margin: 50px auto;">
-            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Acesso Painel NPS</h2>
-            <input type="text" id="user-login" placeholder="E-mail corporativo">
-            <input type="password" id="user-pass" placeholder="Senha">
-            <button class="btn" id="btnLogin" onclick="autenticar()">Entrar</button>
-        </div>
-    </div>
+    <div class="view active" id="view-login">
+        <div class="card" style="max-width: 350px; margin: 50px auto;">
+            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Acesso Painel NPS</h2>
+            <input type="text" id="user-login" placeholder="E-mail corporativo">
+            <input type="password" id="user-pass" placeholder="Senha">
+            <button class="btn" id="btnLogin" onclick="autenticar()">Entrar</button>
+        </div>
+    </div>
 
-    <div class="view" id="view-dashboard">
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 id="welcome-msg" style="font-size: 0.9rem;">Painel de Indicadores</h3>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn-outline" style="display:none;">+ AVALIAR</button>
-                    <button onclick="exportarExcel()" class="btn-outline btn-excel">⬇ EXCEL</button>
-                    <button onclick="abrirTrocaSenha()" class="btn-outline btn-config">⚙ SENHA</button>
-                    <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
-                </div>
-            </div>
-            
-            <div class="filter-group">
-                <div><label>Mês</label><select id="f-mes" onchange="acionarFiltros()"></select></div>
-                <div><label>Unidade</label><select id="f-unidade" onchange="acionarFiltros()"></select></div>
-                <div><label>Cliente</label><select id="f-cliente" onchange="acionarFiltros()"></select></div>
-                <div><label>Contrato</label><select id="f-contrato" onchange="acionarFiltros()"></select></div>
-            </div>
+    <div class="view" id="view-dashboard">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="welcome-msg" style="font-size: 0.9rem;">Painel de Indicadores</h3>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-gestao-master" onclick="abrirGestaoUsuarios()" class="btn-outline btn-usuarios" style="display:none;">👥 USUÁRIOS</button>
+                    <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn-outline" style="display:none;">+ AVALIAR</button>
+                    <button onclick="exportarExcel()" class="btn-outline btn-excel">⬇ EXCEL</button>
+                    <button onclick="abrirTrocaSenha()" class="btn-outline btn-config">⚙ SENHA</button>
+                    <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <div><label>Mês</label><select id="f-mes" onchange="acionarFiltros()"></select></div>
+                <div><label>Unidade</label><select id="f-unidade" onchange="acionarFiltros()"></select></div>
+                <div><label>Cliente</label><select id="f-cliente" onchange="acionarFiltros()"></select></div>
+                <div><label>Contrato</label><select id="f-contrato" onchange="acionarFiltros()"></select></div>
+            </div>
 
-            <div class="grid-metrics">
-                <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
-                <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
-                <div class="card-metric" style="color:#FFCC00"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
-                <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
-                <div class="card-metric" id="card-nps-total"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
-            </div>
+            <div class="grid-metrics">
+                <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
+                <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
+                <div class="card-metric" style="color:#FFCC00"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
+                <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
+                <div class="card-metric" id="card-nps-total"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
+            </div>
 
-            <div style="height: 250px; margin-bottom: 30px;"><canvas id="npsChart"></canvas></div>
+            <div style="height: 250px; margin-bottom: 30px;"><canvas id="npsChart"></canvas></div>
 
-            <h4 style="font-size: 10px; text-transform: uppercase; margin-bottom: 10px; color: var(--vermelho-nps);">Histórico Recente</h4>
-            <div class="table-wrapper">
-                <table id="tabela-historico">
-                    <thead><tr><th>Mês</th><th>Cliente / Contrato</th><th>Nota</th><th>Feedback</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+            <h4 style="font-size: 10px; text-transform: uppercase; margin-bottom: 10px; color: var(--vermelho-nps);">Histórico Recente</h4>
+            <div class="table-wrapper">
+                <table id="tabela-historico">
+                    <thead><tr><th>Mês</th><th>Cliente / Contrato</th><th>Nota</th><th>Feedback</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-    <div class="view" id="view-formulario">
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h2>Nova Avaliação</h2>
-                <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
-            </div>
-            <form id="pesquisaMakro">
-                <label>Mês de Referência</label>
-                <select name="Mes Referente" required>
-                    <option value="Jan 26">Jan 26</option><option value="Fev 26" selected>Fev 26</option><option value="Mar 26">Mar 26</option>
-                </select>
-                <label>Contrato</label>
-                <select id="select-contrato" name="Nome do Contrato" onchange="vincularCodigo(this.value)" required></select>
-                <label>Número do Contrato (Referencial)</label>
-                <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);">
-                <label>Sua Nota (0 a 10)</label>
-                <div class="nps-container">
-                    <script>
-                        for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1; display:flex;"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)" style="display:none"><label for="n${i}" style="flex:1; display:flex; align-items:center; justify-content:center; height:35px; background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); border-radius:5px; cursor:pointer; font-size:11px;">${i}</label></div>`);
-                    </script>
-                </div>
-                <label>Feedback</label>
-                <textarea name="Feedback" rows="3" placeholder="Sua opinião..."></textarea>
-                <input type="hidden" name="Nome do Cliente" id="h-cliente">
-                <input type="hidden" name="Email do Responsável" id="h-email">
-                <input type="hidden" name="Nome do Responsável" id="h-nome">
-                <button type="submit" class="btn" id="btnSubmit">Enviar Avaliação</button>
-            </form>
-        </div>
-    </div>
+    <div class="view" id="view-usuarios">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h2>Gestão de Usuários</h2>
+                <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                <h4 style="font-size: 10px; margin-bottom: 10px;">CADASTRAR NOVO ACESSO</h4>
+                <div class="filter-group">
+                    <div><label>Nome Completo</label><input type="text" id="adm-nome"></div>
+                    <div><label>E-mail (Login)</label><input type="text" id="adm-email"></div>
+                    <div><label>Nível</label>
+                        <select id="adm-tipo">
+                            <option value="Usuario">Usuário (Cliente)</option>
+                            <option value="Gerente de Unidade">Gerente de Unidade</option>
+                            <option value="ADM">Administrador</option>
+                            <option value="ADM MASTER">ADM Master</option>
+                        </select>
+                    </div>
+                    <div><label>Permissões (Cód ou Unidade)</label><input type="text" id="adm-perm" placeholder="Ex: CTR-01 ou Porto"></div>
+                </div>
+                <button onclick="cadastrarUsuario()" class="btn" style="padding: 10px; font-size: 10px;">SALVAR USUÁRIO</button>
+            </div>
 
-    <div class="view" id="view-senha">
-        <div class="card" style="max-width: 350px; margin: 50px auto;">
-            <h2 id="titulo-senha" style="text-align: center; margin-bottom: 20px; font-weight: 900;">Alterar Senha</h2>
-            <label>Nova Senha</label>
-            <input type="password" id="new-pass" placeholder="Mínimo 4 caracteres">
-            <label>Confirmar Senha</label>
-            <input type="password" id="confirm-pass" placeholder="Repita a nova senha">
-            <button class="btn" onclick="salvarNovaSenha()">Atualizar Agora</button>
-            <button id="btn-cancelar-senha" class="btn-outline" onclick="voltarDash()" style="width:100%; margin-top:10px; border-color:#666; color:#666">CANCELAR</button>
-        </div>
-    </div>
+            <div class="table-wrapper">
+                <table id="tabela-usuarios">
+                    <thead><tr><th>Nome</th><th>Login</th><th>Tipo</th><th>Permissões</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="view" id="view-formulario">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h2>Nova Avaliação</h2>
+                <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
+            </div>
+            <form id="pesquisaMakro">
+                <label>Mês de Referência</label>
+                <select name="Mes Referente" required>
+                    <option value="Jan 26">Jan 26</option><option value="Fev 26" selected>Fev 26</option><option value="Mar 26">Mar 26</option>
+                </select>
+                <label>Contrato</label>
+                <select id="select-contrato" name="Nome do Contrato" onchange="vincularCodigo(this.value)" required></select>
+                <label>Número do Contrato (Referencial)</label>
+                <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);">
+                <label>Sua Nota (0 a 10)</label>
+                <div class="nps-container">
+                    <script>
+                        for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1; display:flex;"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)" style="display:none"><label for="n${i}" style="flex:1; display:flex; align-items:center; justify-content:center; height:35px; background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); border-radius:5px; cursor:pointer; font-size:11px;">${i}</label></div>`);
+                    </script>
+                </div>
+                <label>Feedback</label>
+                <textarea name="Feedback" rows="3" placeholder="Sua opinião..."></textarea>
+                <input type="hidden" name="Nome do Cliente" id="h-cliente">
+                <input type="hidden" name="Email do Responsável" id="h-email">
+                <input type="hidden" name="Nome do Responsável" id="h-nome">
+                <button type="submit" class="btn" id="btnSubmit">Enviar Avaliação</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="view" id="view-senha">
+        <div class="card" style="max-width: 350px; margin: 50px auto;">
+            <h2 id="titulo-senha" style="text-align: center; margin-bottom: 20px; font-weight: 900;">Alterar Senha</h2>
+            <label>Nova Senha</label>
+            <input type="password" id="new-pass" placeholder="Mínimo 4 caracteres">
+            <label>Confirmar Senha</label>
+            <input type="password" id="confirm-pass" placeholder="Repita a nova senha">
+            <button class="btn" onclick="salvarNovaSenha()">Atualizar Agora</button>
+            <button id="btn-cancelar-senha" class="btn-outline" onclick="voltarDash()" style="width:100%; margin-top:10px; border-color:#666; color:#666">CANCELAR</button>
+        </div>
+    </div>
 </div>
 
 <footer>MARKETING | MAKRO ENGENHARIA © 2026</footer>
 
 <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
-    let dadosBrutos = [];
-    let dadosFiltradosAtuais = [];
-    let dbContratosGlobal = [];
-    let meusContratosCodigos = []; 
-    let meuGrafico = null;
-    let userTipo = "";
-    let userEmailLogado = "";
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
+    let dadosBrutos = [];
+    let dadosFiltradosAtuais = [];
+    let dbContratosGlobal = [];
+    let meusContratosCodigos = []; 
+    let meuGrafico = null;
+    let userTipo = "";
+    let userEmailLogado = "";
+    let listaUsuariosMaster = [];
 
-    function normalizarMes(valor) {
-        if (!valor) return "S/M";
-        if (typeof valor === 'string' && valor.length === 6) return valor;
-        const data = new Date(valor);
-        if (!isNaN(data.getTime())) {
-            const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-            return `${meses[data.getMonth()]} ${data.getFullYear().toString().substring(2)}`;
-        }
-        return valor.toString();
-    }
+    function normalizarMes(valor) {
+        if (!valor) return "S/M";
+        if (typeof valor === 'string' && valor.length === 6) return valor;
+        const data = new Date(valor);
+        if (!isNaN(data.getTime())) {
+            const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            return `${meses[data.getMonth()]} ${data.getFullYear().toString().substring(2)}`;
+        }
+        return valor.toString();
+    }
 
-    function colorirNota(input) {
-        const nota = parseInt(input.value);
-        const labels = document.querySelectorAll('.nps-item label');
-        labels.forEach(l => {
-            l.style.backgroundColor = "rgba(255,255,255,0.1)";
-            l.style.color = "white";
-        });
-        const labelAtivo = document.querySelector(`label[for="${input.id}"]`);
-        if (nota >= 0 && nota <= 6) labelAtivo.style.backgroundColor = "var(--vermelho-nps)";
-        else if (nota >= 7 && nota <= 8) { labelAtivo.style.backgroundColor = "#FFCC00"; labelAtivo.style.color = "black"; }
-        else if (nota >= 9 && nota <= 10) labelAtivo.style.backgroundColor = "var(--verde-nps)";
-    }
+    function colorirNota(input) {
+        const nota = parseInt(input.value);
+        const labels = document.querySelectorAll('.nps-item label');
+        labels.forEach(l => {
+            l.style.backgroundColor = "rgba(255,255,255,0.1)";
+            l.style.color = "white";
+        });
+        const labelAtivo = document.querySelector(`label[for="${input.id}"]`);
+        if (nota >= 0 && nota <= 6) labelAtivo.style.backgroundColor = "var(--vermelho-nps)";
+        else if (nota >= 7 && nota <= 8) { labelAtivo.style.backgroundColor = "#FFCC00"; labelAtivo.style.color = "black"; }
+        else if (nota >= 9 && nota <= 10) labelAtivo.style.backgroundColor = "var(--verde-nps)";
+    }
 
-    function abrirFormulario() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-formulario').classList.add('active');
-    }
+    function abrirFormulario() {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-formulario').classList.add('active');
+    }
 
-    function voltarDash() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-dashboard').classList.add('active');
-    }
+    function abrirGestaoUsuarios() {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-usuarios').classList.add('active');
+        renderizarTabelaUsuarios();
+    }
 
-    function abrirTrocaSenha() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-senha').classList.add('active');
-        document.getElementById('btn-cancelar-senha').style.display = 'inline-flex';
-        document.getElementById('titulo-senha').innerText = "Alterar Senha";
-    }
+    function voltarDash() {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-dashboard').classList.add('active');
+    }
 
-    function autenticar() {
-        const user = document.getElementById('user-login').value, pass = document.getElementById('user-pass').value, btn = document.getElementById('btnLogin');
-        if(!user || !pass) return alert("Preencha os campos.");
-        btn.innerText = "VALIDANDO..."; btn.disabled = true;
+    function abrirTrocaSenha() {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-senha').classList.add('active');
+        document.getElementById('btn-cancelar-senha').style.display = 'inline-flex';
+        document.getElementById('titulo-senha').innerText = "Alterar Senha";
+    }
 
-        fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
-        .then(res => res.json()).then(res => {
-            if(res.result === "success") {
-                userTipo = res.tipo;
-                userEmailLogado = res.email;
-                dbContratosGlobal = res.metrics.listaContratos;
-                meusContratosCodigos = res.permissoes; 
+    function autenticar() {
+        const user = document.getElementById('user-login').value, pass = document.getElementById('user-pass').value, btn = document.getElementById('btnLogin');
+        if(!user || !pass) return alert("Preencha os campos.");
+        btn.innerText = "VALIDANDO..."; btn.disabled = true;
 
-                // --- LÓGICA DE SENHA PADRÃO ---
-                if (pass === "12345") {
-                    alert("⚠️ Segurança Makro: Identificamos o uso da senha padrão. Você deve alterá-la para prosseguir.");
-                    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                    document.getElementById('view-senha').classList.add('active');
-                    document.getElementById('btn-cancelar-senha').style.display = 'none';
-                    document.getElementById('titulo-senha').innerText = "Troca de Senha Obrigatória";
-                    return;
-                }
-                
-                document.getElementById('view-login').classList.remove('active');
-                document.getElementById('view-dashboard').classList.add('active');
-                document.getElementById('welcome-msg').innerText = `${res.tipo}: ${res.nome}`;
-                
-                const selC = document.getElementById('select-contrato');
-                selC.innerHTML = '<option value="">Selecione...</option>';
-                dbContratosGlobal.forEach(info => {
-                    if(userTipo === "ADM" || meusContratosCodigos.includes(info.numero.toString()) || meusContratosCodigos.includes(info.unidade)) {
-                        selC.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
-                    }
-                });
+        fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
+        .then(res => res.json()).then(res => {
+            if(res.result === "success") {
+                userTipo = res.tipo;
+                userEmailLogado = res.email;
+                dbContratosGlobal = res.metrics.listaContratos;
+                meusContratosCodigos = res.permissoes; 
+                listaUsuariosMaster = res.admData || [];
 
-                dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
-                if(userTipo === "Usuario") document.getElementById('btn-nova-pesquisa').style.display = "block";
+                if (pass === "12345") {
+                    alert("⚠️ Segurança Makro: Identificamos o uso da senha padrão. Você deve alterá-la.");
+                    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                    document.getElementById('view-senha').classList.add('active');
+                    document.getElementById('btn-cancelar-senha').style.display = 'none';
+                    return;
+                }
+                
+                document.getElementById('view-login').classList.remove('active');
+                document.getElementById('view-dashboard').classList.add('active');
+                document.getElementById('welcome-msg').innerText = `${res.tipo}: ${res.nome}`;
+                
+                if(userTipo === "ADM MASTER") document.getElementById('btn-gestao-master').style.display = "inline-flex";
 
-                atualizarOpcoesFiltros();
-                aplicarFiltros();
-            } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
-        }).catch(() => { alert("Erro na conexão"); btn.innerText = "Entrar"; btn.disabled = false; });
-    }
+                const selC = document.getElementById('select-contrato');
+                selC.innerHTML = '<option value="">Selecione...</option>';
+                dbContratosGlobal.forEach(info => {
+                    if(userTipo === "ADM" || userTipo === "ADM MASTER" || meusContratosCodigos.includes(info.numero.toString()) || meusContratosCodigos.includes(info.unidade)) {
+                        selC.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
+                    }
+                });
 
-    function salvarNovaSenha() {
-        const nPass = document.getElementById('new-pass').value;
-        const cPass = document.getElementById('confirm-pass').value;
+                dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
+                if(userTipo === "Usuario") document.getElementById('btn-nova-pesquisa').style.display = "block";
 
-        if(nPass.length < 4) return alert("A senha deve ter pelo menos 4 caracteres.");
-        if(nPass !== cPass) return alert("As senhas não coincidem.");
-        if(nPass === "12345") return alert("Você não pode usar a senha padrão como nova senha.");
+                atualizarOpcoesFiltros();
+                aplicarFiltros();
+            } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
+        }).catch(() => { alert("Erro na conexão"); btn.innerText = "Entrar"; btn.disabled = false; });
+    }
 
-        const btn = event.target;
-        btn.innerText = "SALVANDO..."; btn.disabled = true;
+    function renderizarTabelaUsuarios() {
+        const tbody = document.querySelector('#tabela-usuarios tbody');
+        tbody.innerHTML = listaUsuariosMaster.map(u => `
+            <tr><td>${u.nome}</td><td>${u.login}</td><td style="color:var(--vermelho-nps); font-weight:700;">${u.tipo}</td><td>${u.permissoes || 'Global'}</td></tr>
+        `).join('');
+    }
 
-        fetch(`${scriptURL}?action=changePass&user=${encodeURIComponent(userEmailLogado)}&newPass=${encodeURIComponent(nPass)}`, { method: 'POST' })
-        .then(res => res.json())
-        .then(res => {
-            if(res.result === "success") {
-                alert("Senha atualizada com sucesso! Para sua segurança, faça login novamente.");
-                location.reload();
-            } else { alert("Erro ao atualizar senha."); }
-        })
-        .finally(() => {
-            btn.innerText = "Atualizar Agora"; btn.disabled = false;
-        });
-    }
+    function cadastrarUsuario() {
+        const dados = {
+            action: 'addUser',
+            nome: document.getElementById('adm-nome').value,
+            login: document.getElementById('adm-email').value,
+            tipo: document.getElementById('adm-tipo').value,
+            permissoes: document.getElementById('adm-perm').value
+        };
+        if(!dados.nome || !dados.login) return alert("Preencha Nome e E-mail.");
+        
+        const btn = event.target;
+        btn.innerText = "SALVANDO..."; btn.disabled = true;
 
-    function acionarFiltros() { atualizarOpcoesFiltros(); aplicarFiltros(); }
+        fetch(`${scriptURL}?${new URLSearchParams(dados).toString()}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(res => {
+            if(res.result === "success") {
+                alert("Usuário Makro cadastrado com sucesso!");
+                location.reload();
+            }
+        });
+    }
 
-    function atualizarOpcoesFiltros() {
-        const selMes = document.getElementById('f-mes'), selUnid = document.getElementById('f-unidade'),
-              selCli = document.getElementById('f-cliente'), selCont = document.getElementById('f-contrato');
+    function salvarNovaSenha() {
+        const nPass = document.getElementById('new-pass').value, cPass = document.getElementById('confirm-pass').value;
+        if(nPass.length < 4) return alert("Senha curta.");
+        if(nPass !== cPass) return alert("Senhas diferentes.");
+        fetch(`${scriptURL}?action=changePass&user=${encodeURIComponent(userEmailLogado)}&newPass=${encodeURIComponent(nPass)}`, { method: 'POST' })
+        .then(() => { alert("Sucesso! Logue novamente."); location.reload(); });
+    }
 
-        const valMes = selMes.value || "Todos", valUnid = selUnid.value || "Todas",
-              valCli = selCli.value || "Todos", valCont = selCont.value || "Todos";
+    function acionarFiltros() { atualizarOpcoesFiltros(); aplicarFiltros(); }
 
-        const popular = (el, lista, padrao, atual) => {
-            const itens = [...new Set(lista)].sort();
-            let html = `<option value="${padrao}">${padrao}</option>`;
-            itens.forEach(i => { if(i) html += `<option value="${i}" ${i === atual ? 'selected' : ''}>${i}</option>`; });
-            el.innerHTML = html;
-        };
+    function atualizarOpcoesFiltros() {
+        const selMes = document.getElementById('f-mes'), selUnid = document.getElementById('f-unidade'),
+              selCli = document.getElementById('f-cliente'), selCont = document.getElementById('f-contrato');
+        const valMes = selMes.value || "Todos", valUnid = selUnid.value || "Todas", valCli = selCli.value || "Todos", valCont = selCont.value || "Todos";
+        const popular = (el, lista, padrao, atual) => {
+            const itens = [...new Set(lista)].sort();
+            let html = `<option value="${padrao}">${padrao}</option>`;
+            itens.forEach(i => { if(i) html += `<option value="${i}" ${i === atual ? 'selected' : ''}>${i}</option>`; });
+            el.innerHTML = html;
+        };
+        popular(selMes, dadosBrutos.map(d => d.mes), "Todos", valMes);
+        const dM = dadosBrutos.filter(d => valMes === "Todos" || d.mes === valMes);
+        popular(selUnid, dM.map(d => d.unidade), "Todas", valUnid);
+        const dU = dM.filter(d => valUnid === "Todas" || d.unidade === valUnid);
+        popular(selCli, dU.map(d => d.cliente), "Todos", valCli);
+        const dC = dU.filter(d => valCli === "Todos" || d.cliente === valCli);
+        popular(selCont, dC.map(d => d.contrato), "Todos", valCont);
+    }
 
-        popular(selMes, dadosBrutos.map(d => d.mes), "Todos", valMes);
-        const dadosNoMes = dadosBrutos.filter(d => valMes === "Todos" || d.mes === valMes);
-        popular(selUnid, dadosNoMes.map(d => d.unidade), "Todas", valUnid);
-        const dadosNaUnidade = dadosNoMes.filter(d => valUnid === "Todas" || d.unidade === valUnid);
-        popular(selCli, dadosNaUnidade.map(d => d.cliente), "Todos", valCli);
-        const dadosNoCliente = dadosNaUnidade.filter(d => valCli === "Todos" || d.cliente === valCli);
-        popular(selCont, dadosNoCliente.map(d => d.contrato), "Todos", valCont);
-    }
+    function aplicarFiltros() {
+        const m = document.getElementById('f-mes').value, u = document.getElementById('f-unidade').value, cl = document.getElementById('f-cliente').value, ct = document.getElementById('f-contrato').value;
+        dadosFiltradosAtuais = dadosBrutos.filter(d => (m === "Todos" || d.mes === m) && (u === "Todas" || d.unidade === u) && (cl === "Todos" || d.cliente === cl) && (ct === "Todos" || d.contrato === ct));
+        const t = dadosFiltradosAtuais.length, p = dadosFiltradosAtuais.filter(x => x.nota >= 9).length, n = dadosFiltradosAtuais.filter(x => x.nota >= 7 && x.nota <= 8).length, det = dadosFiltradosAtuais.filter(x => x.nota <= 6).length;
+        const nps = t > 0 ? Math.round(((p - det) / t) * 100) : 0;
+        document.getElementById('m-total').innerText = t;
+        document.getElementById('m-promotores').innerText = p;
+        document.getElementById('m-neutros').innerText = n;
+        document.getElementById('m-detratores').innerText = det;
+        document.getElementById('m-nps').innerText = nps;
+        document.getElementById('card-nps-total').style.backgroundColor = nps >= 75 ? '#007bff' : nps >= 50 ? '#28a745' : nps >= 0 ? '#FF8C00' : '#ED1C24';
+        renderizarGrafico(dadosFiltradosAtuais);
+        renderizarTabela(dadosFiltradosAtuais);
+    }
 
-    function aplicarFiltros() {
-        const m = document.getElementById('f-mes').value, u = document.getElementById('f-unidade').value,
-              cl = document.getElementById('f-cliente').value, ct = document.getElementById('f-contrato').value;
+    function renderizarTabela(dados) {
+        const tbody = document.querySelector('#tabela-historico tbody');
+        tbody.innerHTML = "";
+        [...dados].reverse().forEach(d => {
+            const cor = d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : '#FFCC00';
+            tbody.innerHTML += `<tr><td>${d.mes}</td><td><strong>${d.cliente}</strong><br><span style="opacity:0.6">${d.contrato}</span></td><td><span class="tag-nota" style="background:${cor}">${d.nota}</span></td><td style="max-width:300px; font-style:italic">"${d.feedback || '-'}"</td></tr>`;
+        });
+    }
 
-        dadosFiltradosAtuais = dadosBrutos.filter(d => 
-            (m === "Todos" || d.mes === m) && (u === "Todas" || d.unidade === u) &&
-            (cl === "Todos" || d.cliente === cl) && (ct === "Todos" || d.contrato === ct)
-        );
+    function renderizarGrafico(dados) {
+        const labelsMestre = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26"];
+        const labels = labelsMestre.filter(m => dadosBrutos.some(d => d.mes === m));
+        const scores = labels.map(m => {
+            const dMes = dados.filter(x => x.mes === m);
+            if(dMes.length === 0) return 0;
+            const p = dMes.filter(x => x.nota >= 9).length, det = dMes.filter(x => x.nota <= 6).length;
+            return Math.round(((p - det) / dMes.length) * 100);
+        });
+        if(meuGrafico) meuGrafico.destroy();
+        Chart.register(ChartDataLabels);
+        meuGrafico = new Chart(document.getElementById('npsChart'), {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ data: scores, backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), borderRadius: 5 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#fff', anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 } } }, scales: { y: { min: -100, max: 120, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
+        });
+    }
 
-        const t = dadosFiltradosAtuais.length;
-        const p = dadosFiltradosAtuais.filter(x => x.nota >= 9).length;
-        const n = dadosFiltradosAtuais.filter(x => x.nota >= 7 && x.nota <= 8).length;
-        const det = dadosFiltradosAtuais.filter(x => x.nota <= 6).length;
-        
-        const nps = t > 0 ? Math.round(((p - det) / t) * 100) : 0;
+    function exportarExcel() {
+        const dataExport = dadosFiltradosAtuais.map(d => ({ "Mês": d.mes, "Unidade": d.unidade, "Cliente": d.cliente, "Contrato": d.contrato, "Nota": d.nota, "Feedback": d.feedback }));
+        const ws = XLSX.utils.json_to_sheet(dataExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "NPS");
+        XLSX.writeFile(wb, `NPS_Makro.xlsx`);
+    }
 
-        document.getElementById('m-total').innerText = t;
-        document.getElementById('m-promotores').innerText = p;
-        document.getElementById('m-neutros').innerText = n;
-        document.getElementById('m-detratores').innerText = det;
-        document.getElementById('m-nps').innerText = nps;
-        document.getElementById('card-nps-total').style.backgroundColor = nps >= 75 ? '#007bff' : nps >= 50 ? '#28a745' : nps >= 0 ? '#FF8C00' : '#ED1C24';
+    function vincularCodigo(exibicao) {
+        const c = dbContratosGlobal.find(x => x.exibicao === exibicao);
+        if(c) { document.getElementById('input-num-contrato').value = c.numero; document.getElementById('h-cliente').value = c.cliente; }
+    }
 
-        renderizarGrafico(dadosFiltradosAtuais);
-        renderizarTabela(dadosFiltradosAtuais);
-    }
-
-    function renderizarTabela(dados) {
-        const tbody = document.querySelector('#tabela-historico tbody');
-        tbody.innerHTML = "";
-        [...dados].reverse().forEach(d => {
-            const cor = d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : '#FFCC00';
-            tbody.innerHTML += `<tr><td>${d.mes}</td><td><strong>${d.cliente}</strong><br><span style="opacity:0.6">${d.contrato}</span></td>
-                <td><span class="tag-nota" style="background:${cor}">${d.nota}</span></td><td style="max-width:300px; font-style:italic">"${d.feedback || '-'}"</td></tr>`;
-        });
-    }
-
-    function renderizarGrafico(dados) {
-        const mesesMestre = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26", "Abr 26", "Mai 26", "Jun 26", "Jul 26", "Ago 26", "Set 26", "Out 26", "Nov 26", "Dez 26"];
-        const labels = mesesMestre.filter(m => dadosBrutos.some(d => d.mes === m));
-        const scores = labels.map(m => {
-            const dMes = dados.filter(x => x.mes === m);
-            if(dMes.length === 0) return 0;
-            const p = dMes.filter(x => x.nota >= 9).length, det = dMes.filter(x => x.nota <= 6).length;
-            return Math.round(((p - det) / dMes.length) * 100);
-        });
-        if(meuGrafico) meuGrafico.destroy();
-        Chart.register(ChartDataLabels);
-        meuGrafico = new Chart(document.getElementById('npsChart'), {
-            type: 'bar',
-            data: { labels: labels, datasets: [{ data: scores, backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), borderRadius: 5 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#fff', anchor: 'end', align: 'top', offset: -2, font: { weight: 'bold', size: 10 } } }, scales: { y: { beginAtZero: true, min: -100, max: 120, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
-        });
-    }
-
-    function exportarExcel() {
-        if (dadosFiltradosAtuais.length === 0) return alert("Não há dados para exportar.");
-        const dataExport = dadosFiltradosAtuais.map(d => ({ 
-            "Mês": d.mes, 
-            "Unidade": d.unidade, 
-            "Cliente": d.cliente, 
-            "Contrato": d.contrato, 
-            "Código": d.codigo, 
-            "Nota": d.nota, 
-            "Classificação": d.nota >= 9 ? "Promotor" : d.nota >= 7 ? "Neutro" : "Detrator",
-            "Feedback": d.feedback 
-        }));
-        const ws = XLSX.utils.json_to_sheet(dataExport);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "NPS");
-        XLSX.writeFile(wb, `NPS_Makro_Export.xlsx`);
-    }
-
-    function vincularCodigo(exibicao) {
-        const c = dbContratosGlobal.find(x => x.exibicao === exibicao);
-        if(c) { document.getElementById('input-num-contrato').value = c.numero; document.getElementById('h-cliente').value = c.cliente; }
-    }
-
-    document.getElementById('pesquisaMakro').addEventListener('submit', e => {
-        e.preventDefault();
-        const btn = document.getElementById('btnSubmit');
-        btn.disabled = true; btn.innerText = 'ENVIANDO...';
-        fetch(`${scriptURL}?action=survey&${new URLSearchParams(new FormData(e.target)).toString()}`, { method: 'POST' })
-        .then(() => { alert('Feedback enviado!'); location.reload(); });
-    });
+    document.getElementById('pesquisaMakro').addEventListener('submit', e => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmit');
+        btn.disabled = true; btn.innerText = 'ENVIANDO...';
+        fetch(`${scriptURL}?action=survey&${new URLSearchParams(new FormData(e.target)).toString()}`, { method: 'POST' })
+        .then(() => { alert('Enviado!'); location.reload(); });
+    });
 </script>
-</body>
-</html>

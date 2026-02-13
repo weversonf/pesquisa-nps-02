@@ -109,12 +109,12 @@
     <div class="view" id="view-usuarios">
         <div class="card">
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h2>Gestão de Usuários</h2>
+                <h2 id="titulo-gestao">Gestão de Usuários</h2>
                 <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
             </div>
             
             <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <h4 style="font-size: 10px; margin-bottom: 10px;">CADASTRAR NOVO ACESSO</h4>
+                <h4 id="subtitulo-gestao" style="font-size: 10px; margin-bottom: 10px;">CADASTRAR NOVO ACESSO</h4>
                 <div class="filter-group">
                     <div><label>Nome Completo</label><input type="text" id="adm-nome"></div>
                     <div><label>E-mail (Login)</label><input type="text" id="adm-email"></div>
@@ -128,12 +128,13 @@
                     </div>
                     <div><label>Permissões (Cód ou Unidade)</label><input type="text" id="adm-perm" placeholder="Ex: CTR-01 ou Porto"></div>
                 </div>
-                <button onclick="cadastrarUsuario()" class="btn" style="padding: 10px; font-size: 10px;">SALVAR USUÁRIO</button>
+                <button id="btnSalvarUsuario" onclick="cadastrarUsuario()" class="btn" style="padding: 10px; font-size: 10px;">SALVAR USUÁRIO</button>
+                <button id="btnCancelarEdicao" onclick="limparFormularioUsuario()" class="btn-outline" style="display:none; width:100%; margin-top:5px; border-color:#aaa; color:#aaa;">CANCELAR EDIÇÃO</button>
             </div>
 
             <div class="table-wrapper">
                 <table id="tabela-usuarios">
-                    <thead><tr><th>Nome</th><th>Login</th><th>Tipo</th><th>Permissões</th></tr></thead>
+                    <thead><tr><th>Nome</th><th>Login</th><th>Tipo</th><th>Permissões</th><th>Ações</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -196,6 +197,7 @@
     let userTipo = "";
     let userEmailLogado = "";
     let listaUsuariosMaster = [];
+    let modoEdicaoUsuario = false;
 
     function normalizarMes(valor) {
         if (!valor) return "S/M";
@@ -292,13 +294,48 @@
     function renderizarTabelaUsuarios() {
         const tbody = document.querySelector('#tabela-usuarios tbody');
         tbody.innerHTML = listaUsuariosMaster.map(u => `
-            <tr><td>${u.nome}</td><td>${u.login}</td><td style="color:var(--vermelho-nps); font-weight:700;">${u.tipo}</td><td>${u.permissoes || 'Global'}</td></tr>
+            <tr>
+                <td>${u.nome}</td>
+                <td>${u.login}</td>
+                <td style="color:var(--vermelho-nps); font-weight:700;">${u.tipo}</td>
+                <td>${u.permissoes || 'Global'}</td>
+                <td>
+                    <button onclick="prepararEdicaoUsuario('${u.nome}', '${u.login}', '${u.tipo}', '${u.permissoes}')" class="btn-outline" style="padding:2px 5px; border-color:#FFCC00; color:#FFCC00; margin-right:5px;">✎</button>
+                    <button onclick="deletarUsuario('${u.login}')" class="btn-outline" style="padding:2px 5px;">✖</button>
+                </td>
+            </tr>
         `).join('');
+    }
+
+    function prepararEdicaoUsuario(nome, login, tipo, perm) {
+        modoEdicaoUsuario = true;
+        document.getElementById('adm-nome').value = nome;
+        document.getElementById('adm-email').value = login;
+        document.getElementById('adm-email').disabled = true;
+        document.getElementById('adm-tipo').value = tipo;
+        document.getElementById('adm-perm').value = perm === 'undefined' ? '' : perm;
+        
+        document.getElementById('subtitulo-gestao').innerText = "EDITAR USUÁRIO";
+        document.getElementById('btnSalvarUsuario').innerText = "ATUALIZAR USUÁRIO";
+        document.getElementById('btnCancelarEdicao').style.display = "block";
+    }
+
+    function limparFormularioUsuario() {
+        modoEdicaoUsuario = false;
+        document.getElementById('adm-nome').value = "";
+        document.getElementById('adm-email').value = "";
+        document.getElementById('adm-email').disabled = false;
+        document.getElementById('adm-tipo').value = "Usuario";
+        document.getElementById('adm-perm').value = "";
+        
+        document.getElementById('subtitulo-gestao').innerText = "CADASTRAR NOVO ACESSO";
+        document.getElementById('btnSalvarUsuario').innerText = "SALVAR USUÁRIO";
+        document.getElementById('btnCancelarEdicao').style.display = "none";
     }
 
     function cadastrarUsuario() {
         const dados = {
-            action: 'addUser',
+            action: modoEdicaoUsuario ? 'editUser' : 'addUser',
             nome: document.getElementById('adm-nome').value,
             login: document.getElementById('adm-email').value,
             tipo: document.getElementById('adm-tipo').value,
@@ -306,15 +343,33 @@
         };
         if(!dados.nome || !dados.login) return alert("Preencha Nome e E-mail.");
         
-        const btn = event.target;
-        btn.innerText = "SALVANDO..."; btn.disabled = true;
+        const btn = document.getElementById('btnSalvarUsuario');
+        btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
         fetch(`${scriptURL}?${new URLSearchParams(dados).toString()}`, { method: 'POST' })
         .then(res => res.json())
         .then(res => {
             if(res.result === "success") {
-                alert("Usuário Makro cadastrado com sucesso!");
+                alert(modoEdicaoUsuario ? "Usuário atualizado!" : "Usuário cadastrado!");
                 location.reload();
+            } else {
+                alert("Erro na operação.");
+                btn.innerText = "SALVAR USUÁRIO"; btn.disabled = false;
+            }
+        });
+    }
+
+    function deletarUsuario(login) {
+        if(!confirm(`Tem certeza que deseja excluir o usuário ${login}?`)) return;
+        
+        fetch(`${scriptURL}?action=deleteUser&login=${encodeURIComponent(login)}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(res => {
+            if(res.result === "success") {
+                alert("Usuário removido com sucesso!");
+                location.reload();
+            } else {
+                alert("Erro ao remover usuário.");
             }
         });
     }
@@ -411,3 +466,5 @@
         .then(() => { alert('Enviado!'); location.reload(); });
     });
 </script>
+</body>
+</html>

@@ -3,190 +3,138 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema NPS | Makro Engenharia</title>
+    <title>Painel NPS Master | Makro Engenharia</title>
+    <link rel="icon" type="image/png" href="https://makroengenharia.com.br/wp-content/uploads/2023/03/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        /* (Seu CSS original mantido, adicionei apenas os estilos para a gestão) */
         :root {
             --azul-profundo: #011f42; --azul-makro: #023F88;
-            --vermelho-nps: #ED1C24; --laranja-nps: #FF8C00; --verde-nps: #28a745; --azul-nps: #007bff;
+            --vermelho-nps: #ED1C24; --amarelo-nps: #FFCC00; --verde-nps: #28a745;
             --branco: #FFFFFF; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
         body { background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo)); background-attachment: fixed; color: var(--branco); min-height: 100vh; }
-        header { padding: 1.5rem; text-align: center; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--glass-border); }
-        .container { padding: 1.5rem; max-width: 950px; margin: 0 auto; }
+        header { padding: 1.5rem; text-align: center; backdrop-filter: blur(12px); background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--glass-border); }
+        .container { padding: 1.5rem; max-width: 1000px; margin: 0 auto; }
         .view { display: none; }
         .view.active { display: block; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
-        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        select, input, textarea { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: #cccccc; width: 100%; outline: none; font-size: 11px; margin-bottom: 10px; }
-        label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
-        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
-        .card-metric h2 { font-size: 24px; font-weight: 900; }
-        .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        
+        /* Cards e Métricas */
+        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 2rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
+        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card-metric { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; text-align: center; border: 1px solid var(--glass-border); }
+        .card-metric span { font-size: 10px; opacity: 0.7; text-transform: uppercase; display: block; }
+        .card-metric h2 { font-size: 28px; margin-top: 5px; }
+
+        /* Tabela */
         .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
-        th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
-        td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; }
-        footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+        th { background: rgba(255,255,255,0.1); padding: 15px; color: var(--vermelho-nps); text-transform: uppercase; }
+        td { padding: 15px; border-bottom: 1px solid var(--glass-border); }
+
+        .btn { background: var(--vermelho-nps); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; text-transform: uppercase; font-size: 11px; }
+        input, select { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: white; width: 100%; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <header>
-    <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" style="max-width: 120px;">
-    <div style="font-size: 0.6rem; letter-spacing: 3px; opacity: 0.6; margin-top: 5px;">PAINEL NPS | MAKRO ENGENHARIA</div>
+    <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" width="130">
+    <p style="font-size: 0.6rem; letter-spacing: 3px; opacity: 0.6; margin-top: 5px;">PAINEL MASTER | MAKRO ENGENHARIA</p>
 </header>
 
 <div class="container">
     <div class="view active" id="view-login">
-        <div class="card" style="max-width: 350px; margin: 50px auto;">
-            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Acesso Master NPS</h2>
-            <input type="text" id="user-login" placeholder="E-mail corporativo">
+        <div class="card" style="max-width: 400px; margin: 50px auto;">
+            <h2 style="text-align: center; margin-bottom: 25px;">Acesso Restrito</h2>
+            <input type="text" id="user-login" placeholder="Usuário">
             <input type="password" id="user-pass" placeholder="Senha">
-            <button class="btn" id="btnLogin" onclick="autenticar()">Entrar</button>
+            <button class="btn" style="width: 100%;" onclick="autenticar()">Entrar</button>
         </div>
     </div>
 
     <div class="view" id="view-dashboard">
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 id="welcome-msg" style="font-size: 0.9rem;">Olá, Weverson</h3>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-master-users" onclick="abrirGestaoUsuarios()" class="btn-outline" style="display:none; border-color:#007bff; color:#007bff">👥 GESTÃO</button>
-                    <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn-outline" style="display:none;">+ AVALIAR</button>
-                    <button onclick="exportarExcel()" class="btn-outline btn-excel" style="border-color:#28a745; color:#28a745;">⬇ EXCEL</button>
-                    <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
-                </div>
-            </div>
-            
-            <div class="grid-metrics">
-                <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
-                <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
-                <div class="card-metric" style="color:#FFCC00"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
-                <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
-                <div class="card-metric" id="card-nps-total"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
-            </div>
-
-            <div style="height: 250px; margin-bottom: 30px;"><canvas id="npsChart"></canvas></div>
-        </div>
-    </div>
-
-    <div class="view" id="view-usuarios">
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h2>Gestão de Usuários</h2>
-                <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
-            </div>
-
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <h4 style="font-size: 10px; margin-bottom: 10px;">CADASTRAR NOVO PERFIL</h4>
-                <div class="filter-group">
-                    <input type="text" id="adm-nome" placeholder="Nome Completo">
-                    <input type="text" id="adm-email" placeholder="Login (E-mail)">
-                    <select id="adm-tipo">
-                        <option value="Usuario">Usuário (Cliente)</option>
-                        <option value="Gerente de Unidade">Gerente de Unidade</option>
-                        <option value="ADM MASTER">Administrador Master</option>
-                    </select>
-                    <input type="text" id="adm-perm" placeholder="Permissões (Unid ou Cód Contrato)">
-                    <button onclick="cadastrarUsuario()" class="btn" style="padding: 10px; font-size: 10px;">SALVAR</button>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table id="tabela-usuarios">
-                    <thead><tr><th>Nome</th><th>Login</th><th>Nível</th><th>Permissões</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="user-title">ADM MASTER: Weverson</h2>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" style="background:#007bff">👥 GESTÃO</button>
+                <button onclick="location.reload()" class="btn" style="background:rgba(255,255,255,0.1)">SAIR</button>
             </div>
         </div>
-    </div>
 
+        <div class="grid-metrics">
+            <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
+            <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
+            <div class="card-metric" style="color:var(--amarelo-nps)"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
+            <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
+            <div class="card-metric" style="background:var(--vermelho-nps)"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
+        </div>
+
+        <div class="card">
+            <canvas id="graficoNps" height="150"></canvas>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="tabela-respostas">
+                <thead><tr><th>Mês</th><th>Cliente / Operação</th><th>Nota</th><th>Feedback</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
+</div>
 
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
-    let userTipo = "";
-    let listaUsuariosAdm = [];
 
-    // --- FUNÇÕES DE NAVEGAÇÃO MASTER ---
-    function abrirGestaoUsuarios() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-usuarios').classList.add('active');
-        renderizarTabelaUsuarios();
-    }
-
-    function renderizarTabelaUsuarios() {
-        const tbody = document.querySelector('#tabela-usuarios tbody');
-        tbody.innerHTML = listaUsuariosAdm.map(u => `
-            <tr>
-                <td>${u.nome}</td>
-                <td>${u.login}</td>
-                <td style="color:var(--vermelho-nps)">${u.tipo}</td>
-                <td style="font-size:8px">${u.permissoes || 'Global'}</td>
-            </tr>
-        `).join('');
-    }
-
-    function cadastrarUsuario() {
-        const dados = {
-            nome: document.getElementById('adm-nome').value,
-            login: document.getElementById('adm-email').value,
-            tipo: document.getElementById('adm-tipo').value,
-            permissoes: document.getElementById('adm-perm').value,
-            action: 'addUser'
-        };
-
-        if(!dados.nome || !dados.login) return alert("Preencha Nome e E-mail.");
-
-        fetch(`${scriptURL}?${new URLSearchParams(dados).toString()}`, { method: 'POST' })
+    function autenticar() {
+        const user = document.getElementById('user-login').value;
+        const pass = document.getElementById('user-pass').value;
+        
+        fetch(`${scriptURL}?action=login&user=${user}&pass=${pass}`)
         .then(res => res.json())
         .then(res => {
             if(res.result === "success") {
-                alert("Usuário cadastrado na Makro!");
-                location.reload();
-            }
-        });
-    }
-
-    // --- ATUALIZAÇÃO DA FUNÇÃO AUTENTICAR PARA MASTER ---
-    function autenticar() {
-        const user = document.getElementById('user-login').value, pass = document.getElementById('user-pass').value;
-        const btn = document.getElementById('btnLogin');
-        btn.innerText = "VALIDANDO..."; btn.disabled = true;
-
-        fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
-        .then(res => res.json()).then(res => {
-            if(res.result === "success") {
-                userTipo = res.tipo;
-                listaUsuariosAdm = res.admData || []; // Recebe a lista de usuários se for Master
-                
-                document.getElementById('view-login').classList.remove('active');
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-dashboard').classList.add('active');
-                document.getElementById('welcome-msg').innerText = `${res.tipo}: ${res.nome}`;
+                
+                const dados = res.metrics.baseDados;
+                const total = dados.length;
+                const p = dados.filter(d => d.nota >= 9).length;
+                const det = dados.filter(d => d.nota <= 6).length;
+                const n = dados.filter(d => d.nota >= 7 && d.nota <= 8).length;
+                const score = total > 0 ? Math.round(((p - det) / total) * 100) : 0;
 
-                // Ativa botão de Gestão se for Master
-                if(userTipo === "ADM MASTER") {
-                    document.getElementById('btn-master-users').style.display = "inline-flex";
-                }
+                document.getElementById('m-total').innerText = total;
+                document.getElementById('m-promotores').innerText = p;
+                document.getElementById('m-neutros').innerText = n;
+                document.getElementById('m-detratores').innerText = det;
+                document.getElementById('m-nps').innerText = score;
 
-                // (Restante da sua lógica de carregamento de dados mantida...)
-                dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
-                atualizarOpcoesFiltros();
-                aplicarFiltros();
-            } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
+                // Preenche a Tabela
+                const tbody = document.querySelector('#tabela-respostas tbody');
+                tbody.innerHTML = dados.map(d => `
+                    <tr>
+                        <td>${d.mes || '-'}</td>
+                        <td><strong>${d.cliente}</strong><br><small>${d.contrato}</small></td>
+                        <td><span style="background:${d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : 'var(--amarelo-nps)'}; padding: 3px 8px; border-radius: 4px;">${d.nota}</span></td>
+                        <td style="font-style:italic; opacity:0.8">"${d.feedback}"</td>
+                    </tr>
+                `).join('');
+
+                // Renderiza Gráfico Simples
+                new Chart(document.getElementById('graficoNps'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Score Atual'],
+                        datasets: [{ data: [score], backgroundColor: '#ED1C24' }]
+                    },
+                    options: { plugins: { legend: { display: false } }, scales: { y: { min: -100, max: 100 } } }
+                });
+            } else { alert("Erro no login!"); }
         });
     }
-    
-    // (Restante do seu Script mantido...)
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS - Makro Engenharia</title>
+    <title>Painel NPS - Makro Engenharia v02</title>
     
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -11,15 +11,17 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React e ReactDOM (Versão Estável) -->
+    <!-- React e ReactDOM (Versão Estável 18.2.0) -->
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
     
-    <!-- Babel para JSX -->
+    <!-- Babel para transformar JSX em tempo real -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Recharts (UMD Build corrigido) -->
+    <!-- Dependência necessária para o Recharts rodar em UMD -->
     <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+    
+    <!-- Recharts (UMD Build corrigido para evitar ReferenceError) -->
     <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
     
     <!-- Lucide Icons -->
@@ -44,7 +46,7 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
         
-        // Verificação de segurança para o Recharts
+        // CORREÇÃO: Acessar Recharts através do window para evitar "Recharts is not defined"
         const { 
             BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
             ResponsiveContainer, Cell, PieChart, Pie 
@@ -52,7 +54,7 @@
 
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
 
-        // Componente de Ícone Robusto
+        // Componente de Ícone Robusto para ambiente HTML
         const Icon = ({ name, size = 18, className = "" }) => {
             const [iconHtml, setIconHtml] = useState("");
             useEffect(() => {
@@ -118,8 +120,8 @@
                         setResponses(res.metrics?.baseDados || []);
                         setUsersList(res.admData || []);
                         setView(loginData.password === "12345" ? 'password' : 'dashboard');
-                    } else { alert("Acesso negado. Verifique suas credenciais."); }
-                } catch (err) { alert("Erro de conexão com o servidor."); }
+                    } else { alert("Acesso negado. Verifique as suas credenciais."); }
+                } catch (err) { alert("Erro de ligação com o servidor."); }
                 finally { setLoading(false); }
             };
 
@@ -136,7 +138,7 @@
                     const res = await fetch(`${SCRIPT_URL}?${new URLSearchParams(params).toString()}`, { method: 'POST' });
                     const data = await res.json();
                     if (data.result === "success") {
-                        alert(editingLogin ? "Usuário atualizado!" : "Operação realizada!");
+                        alert(editingLogin ? "Usuário atualizado!" : "Operação realizada com sucesso!");
                         window.location.reload();
                     }
                 } catch (err) { alert("Erro na gestão de usuários."); }
@@ -181,7 +183,6 @@
                 });
             }, [responses]);
 
-            // AGULHA CALIBRADA: -100 (180°) | 0 (90°) | 100 (0°)
             const RADIAN = Math.PI / 180;
             const renderNeedle = (value, cx, cy, iR, oR) => {
                 const clampedValue = Math.max(-100, Math.min(100, value));
@@ -223,7 +224,7 @@
                 const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
                 const link = document.createElement("a");
                 link.setAttribute("href", encodeURI(csvContent));
-                link.setAttribute("download", `Export_NPS_Makro.csv`);
+                link.setAttribute("download", `Export_NPS_Makro_Engenharia.csv`);
                 link.click();
             };
 
@@ -236,7 +237,7 @@
             return (
                 <div className="min-h-screen">
                     <header className="p-6 flex flex-col items-center border-b border-white/10 bg-black/40 sticky top-0 z-50 backdrop-blur-md">
-                        <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" alt="Makro" className="h-10 mb-2" />
+                        <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" alt="Makro Engenharia" className="h-10 mb-2" />
                         <div className="text-[10px] tracking-[4px] opacity-60 font-bold uppercase">Painel NPS | Makro Engenharia</div>
                     </header>
 
@@ -248,8 +249,8 @@
                                 <form onSubmit={handleLogin} className="w-full max-w-sm p-10 rounded-3xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl">
                                     <h2 className="text-2xl font-bold text-center mb-8 uppercase tracking-tighter">Login Makro</h2>
                                     <div className="space-y-4">
-                                        <input className="w-full bg-white/10 p-4 rounded-xl outline-none focus:ring-2 ring-red-500 transition-all" placeholder="E-mail ou Usuário" required onChange={e => setLoginData({...loginData, identifier: e.target.value})} />
-                                        <input type="password" className="w-full bg-white/10 p-4 rounded-xl outline-none focus:ring-2 ring-red-500 transition-all" placeholder="Senha" required onChange={e => setLoginData({...loginData, password: e.target.value})} />
+                                        <input className="w-full bg-white/10 p-4 rounded-xl outline-none focus:ring-2 ring-red-500 transition-all text-white" placeholder="E-mail ou Usuário" required onChange={e => setLoginData({...loginData, identifier: e.target.value})} />
+                                        <input type="password" className="w-full bg-white/10 p-4 rounded-xl outline-none focus:ring-2 ring-red-500 transition-all text-white" placeholder="Senha" required onChange={e => setLoginData({...loginData, password: e.target.value})} />
                                         <button className="w-full bg-red-600 p-4 rounded-xl font-bold uppercase hover:bg-red-700 transition shadow-lg shadow-red-600/20 active:scale-95">Entrar no Painel</button>
                                     </div>
                                 </form>
@@ -286,7 +287,7 @@
                                     {['mes', 'unidade', 'cliente', 'contrato'].map(f => (
                                         <div key={f}>
                                             <label className="text-[9px] uppercase font-bold opacity-40 mb-1 block tracking-widest">{f}</label>
-                                            <select className="w-full bg-white/5 p-2 rounded-lg text-xs outline-none border border-white/10" value={filters[f]} onChange={(e) => setFilters({...filters, [f]: e.target.value})}>
+                                            <select className="w-full bg-white/5 p-2 rounded-lg text-xs outline-none border border-white/10 text-white" value={filters[f]} onChange={(e) => setFilters({...filters, [f]: e.target.value})}>
                                                 <option value={f === 'unidade' ? 'Todas' : 'Todos'}>Todos</option>
                                                 {[...new Set(responses.map(r => r[f]))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
                                             </select>
@@ -312,7 +313,7 @@
                                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.05} vertical={false}/>
                                                     <XAxis dataKey="mes" stroke="#ffffff22" fontSize={10}/>
                                                     <YAxis stroke="#ffffff22" domain={[-100, 100]} fontSize={10}/>
-                                                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.03)'}} contentStyle={{backgroundColor: '#010816', border: '1px solid #ffffff11', borderRadius: '12px', fontSize: '10px'}}/>
+                                                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.03)'}} contentStyle={{backgroundColor: '#010816', border: '1px solid #ffffff11', borderRadius: '12px', fontSize: '10px', color: '#fff'}}/>
                                                     <Bar dataKey="score" radius={[6, 6, 0, 0]}>
                                                         {monthlyNpsData.map((e, i) => <Cell key={i} fill={getStatusColor(e.score)} />)}
                                                     </Bar>
@@ -349,21 +350,21 @@
                                         <div className="flex flex-wrap gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
                                             <div className="flex items-center gap-2 pr-3 border-r border-white/10">
                                                 <span className="text-[9px] uppercase font-black opacity-40">Mês:</span>
-                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer" value={tableFilters.mes} onChange={e => setTableFilters({...tableFilters, mes: e.target.value})}>
+                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white" value={tableFilters.mes} onChange={e => setTableFilters({...tableFilters, mes: e.target.value})}>
                                                     <option value="Todos" className="bg-slate-900">Todos</option>
                                                     {[...new Set(responses.map(r => r.mes))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
                                                 </select>
                                             </div>
                                             <div className="flex items-center gap-2 pr-3 border-r border-white/10">
                                                 <span className="text-[9px] uppercase font-black opacity-40">Unid:</span>
-                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer" value={tableFilters.unidade} onChange={e => setTableFilters({...tableFilters, unidade: e.target.value})}>
+                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white" value={tableFilters.unidade} onChange={e => setTableFilters({...tableFilters, unidade: e.target.value})}>
                                                     <option value="Todas" className="bg-slate-900">Todas</option>
                                                     {[...new Set(responses.map(r => r.unidade))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
                                                 </select>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[9px] uppercase font-black opacity-40">Cli:</span>
-                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer" value={tableFilters.cliente} onChange={e => setTableFilters({...tableFilters, cliente: e.target.value})}>
+                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white" value={tableFilters.cliente} onChange={e => setTableFilters({...tableFilters, cliente: e.target.value})}>
                                                     <option value="Todos" className="bg-slate-900">Todos</option>
                                                     {[...new Set(responses.map(r => r.cliente))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
                                                 </select>
@@ -383,10 +384,10 @@
                                             </thead>
                                             <tbody className="divide-y divide-white/5">
                                                 {tableData.length === 0 ? (
-                                                    <tr><td colSpan="5" className="p-20 text-center opacity-20 uppercase font-bold text-xs">Nenhum registro selecionado</td></tr>
+                                                    <tr><td colSpan="5" className="p-20 text-center opacity-20 uppercase font-bold text-xs text-white">Nenhum registro selecionado</td></tr>
                                                 ) : (
                                                     tableData.map((r, i) => (
-                                                        <tr key={i} className="group">
+                                                        <tr key={i} className="group text-white">
                                                             <td className="p-4 text-[10px] opacity-50 whitespace-nowrap">{r.data ? new Date(r.data).toLocaleDateString() : '--'}</td>
                                                             <td className="p-4 text-[11px] font-bold text-blue-400">{r.contrato}</td>
                                                             <td className="p-4 text-[11px] uppercase truncate max-w-[150px]">{r.cliente}</td>
@@ -408,22 +409,22 @@
                             <div className="space-y-6 animate-fadeIn">
                                 <div className="flex justify-between items-center mb-8">
                                     <h2 className="text-2xl font-bold uppercase flex items-center gap-3"><Icon name="UserPlus" className="text-blue-500" /> Gestão de Usuários</h2>
-                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition">Voltar ao Painel</button>
+                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition text-white">Voltar ao Painel</button>
                                 </div>
                                 <div className={`p-8 rounded-3xl bg-white/5 border border-white/10 ${editingLogin ? 'border-blue-500' : ''} transition-all`}>
-                                    <h4 className="text-[10px] uppercase font-bold opacity-40 mb-6 tracking-widest">{editingLogin ? `Editando: ${editingLogin}` : 'Novo Cadastro'}</h4>
+                                    <h4 className="text-[10px] uppercase font-bold opacity-40 mb-6 tracking-widest text-white">{editingLogin ? `Editando: ${editingLogin}` : 'Novo Cadastro'}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        <input value={newUser.nome} className="bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500" placeholder="Nome Completo" onChange={e => setNewUser({...newUser, nome: e.target.value})} />
-                                        <input value={newUser.email} disabled={!!editingLogin} className={`bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 ${editingLogin ? 'opacity-50' : ''}`} placeholder="Login" onChange={e => setNewUser({...newUser, email: e.target.value})} />
-                                        <select value={newUser.tipo} className="bg-white/10 p-4 rounded-xl outline-none text-sm" onChange={e => setNewUser({...newUser, tipo: e.target.value})}>
+                                        <input value={newUser.nome} className="bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 text-white" placeholder="Nome Completo" onChange={e => setNewUser({...newUser, nome: e.target.value})} />
+                                        <input value={newUser.email} disabled={!!editingLogin} className={`bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 text-white ${editingLogin ? 'opacity-50' : ''}`} placeholder="Login" onChange={e => setNewUser({...newUser, email: e.target.value})} />
+                                        <select value={newUser.tipo} className="bg-white/10 p-4 rounded-xl outline-none text-sm text-white" onChange={e => setNewUser({...newUser, tipo: e.target.value})}>
                                             <option value="Usuario" className="bg-slate-900">Usuário</option>
                                             <option value="ADM MASTER" className="bg-slate-900">ADM Master</option>
                                         </select>
-                                        <button onClick={() => manageUser('add')} className={`rounded-xl font-bold text-xs uppercase shadow-lg transition active:scale-95 ${editingLogin ? 'bg-blue-600' : 'bg-green-600'}`}>
+                                        <button onClick={() => manageUser('add')} className={`rounded-xl font-bold text-xs uppercase shadow-lg transition active:scale-95 text-white ${editingLogin ? 'bg-blue-600' : 'bg-green-600'}`}>
                                             {editingLogin ? 'Atualizar' : 'Salvar'}
                                         </button>
                                     </div>
-                                    {editingLogin && <button onClick={() => { setEditingLogin(null); setNewUser({nome:'', email:'', tipo:'Usuario', permissoes:''}); }} className="mt-4 text-[9px] uppercase font-bold opacity-40 hover:opacity-100 transition underline">Cancelar Edição</button>}
+                                    {editingLogin && <button onClick={() => { setEditingLogin(null); setNewUser({nome:'', email:'', tipo:'Usuario', permissoes:''}); }} className="mt-4 text-[9px] uppercase font-bold opacity-40 hover:opacity-100 transition underline text-white">Cancelar Edição</button>}
                                 </div>
                                 <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
                                     <table className="w-full text-xs text-left">
@@ -432,7 +433,7 @@
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
                                             {usersList.map(u => (
-                                                <tr key={u.login} className={editingLogin === u.login ? 'bg-blue-500/10' : ''}>
+                                                <tr key={u.login} className={`text-white ${editingLogin === u.login ? 'bg-blue-500/10' : ''}`}>
                                                     <td className="p-5 font-medium">{u.nome}</td>
                                                     <td className="p-5 opacity-60">{u.login}</td>
                                                     <td className="p-5"><span className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded text-[10px] font-bold">{u.tipo}</span></td>
@@ -450,7 +451,7 @@
                             </div>
                         )}
                     </main>
-                    <footer className="fixed bottom-0 left-0 w-full p-6 text-center bg-[#010816]/80 backdrop-blur-sm opacity-30 text-[9px] uppercase font-bold tracking-[4px] pointer-events-none">Marketing & Qualidade | Makro Engenharia © 2026</footer>
+                    <footer className="fixed bottom-0 left-0 w-full p-6 text-center bg-[#010816]/80 backdrop-blur-sm opacity-30 text-[9px] uppercase font-bold tracking-[4px] pointer-events-none text-white">Marketing & Qualidade | Makro Engenharia © 2026</footer>
                 </div>
             );
         };

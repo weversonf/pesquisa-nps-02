@@ -1,470 +1,814 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema NPS | Makro Engenharia</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        :root {
-            --azul-profundo: #011f42; --azul-makro: #023F88;
-            --vermelho-nps: #ED1C24; --laranja-nps: #FF8C00; --verde-nps: #28a745; --azul-nps: #007bff;
-            --branco: #FFFFFF; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
-        body { background: radial-gradient(circle at top right, var(--azul-makro), var(--azul-profundo)); background-attachment: fixed; color: var(--branco); min-height: 100vh; }
-        header { padding: 1.5rem; text-align: center; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--glass-border); }
-        .container { padding: 1.5rem; max-width: 950px; margin: 0 auto; }
-        .view { display: none; }
-        .view.active { display: block; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background: var(--glass); backdrop-filter: blur(15px); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
-        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        
-        select, input, textarea {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: #cccccc; width: 100%; outline: none; font-size: 11px; margin-bottom: 20px;
-        }
-        select option { background: var(--azul-profundo); color: #cccccc; }
-        label { font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; opacity: 0.7; }
-        
-        .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .card-metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
-        .card-metric h2 { font-size: 24px; font-weight: 900; }
-        
-        .btn { background: linear-gradient(90deg, #ED1C24, #b31217); color: white; padding: 1rem; border-radius: 12px; border: none; width: 100%; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .btn-outline { background: transparent; border: 1px solid var(--vermelho-nps); color: var(--vermelho-nps); padding: 0.5rem 1rem; font-size: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-        .btn-excel { border-color: #28a745; color: #28a745; }
-        .btn-config { border-color: #aaa; color: #aaa; }
-        .btn-usuarios { border-color: #51d1fd; color: #51d1fd; }
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell, 
+  PieChart, 
+  Pie
+} from 'recharts';
+import { 
+  TrendingUp, 
+  MessageSquare, 
+  LogOut,
+  UserPlus, 
+  FileSpreadsheet,
+  ShieldCheck,
+  Plus,
+  Gauge,
+  Key,
+  ChevronLeft,
+  Trash2,
+  Filter,
+  Download,
+  Pencil,
+  X
+} from 'lucide-react';
 
-        .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; }
-        th { background: rgba(255,255,255,0.1); padding: 12px; text-transform: uppercase; color: var(--vermelho-nps); font-weight: 900; }
-        td { padding: 12px; border-bottom: 1px solid var(--glass-border); color: #ddd; }
-        .tag-nota { padding: 4px 8px; border-radius: 4px; font-weight: 900; color: white; display: inline-block; text-align: center; min-width: 25px; }
+// URL DO SEU GOOGLE APPS SCRIPT
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
 
-        footer { text-align: center; padding: 2rem; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 2px; }
-    </style>
-</head>
-<body>
+const App = () => {
+  const [view, setView] = useState('login'); 
+  const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [responses, setResponses] = useState([]);
+  const [usersList, setUsersList] = useState([]);
+  const [dbContratosGlobal, setDbContratosGlobal] = useState([]);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [editingLogin, setEditingLogin] = useState(null);
+  
+  // Filtros Globais
+  const [filters, setFilters] = useState({ 
+    mes: 'Todos', 
+    unidade: 'Todas', 
+    cliente: 'Todos', 
+    contrato: 'Todos'
+  });
 
-<header>
-    <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" style="max-width: 120px;">
-    <div style="font-size: 0.6rem; letter-spacing: 3px; opacity: 0.6; margin-top: 5px;">PAINEL NPS | MAKRO ENGENHARIA</div>
-</header>
+  // Filtros Locais para a Tabela de Comentários
+  const [tableFilters, setTableFilters] = useState({
+    mes: 'Todos',
+    unidade: 'Todas',
+    cliente: 'Todos'
+  });
 
-<div class="container">
-    <div class="view active" id="view-login">
-        <div class="card" style="max-width: 350px; margin: 50px auto;">
-            <h2 style="text-align: center; margin-bottom: 20px; font-weight: 900;">Acesso Painel NPS</h2>
-            <input type="text" id="user-login" placeholder="E-mail corporativo">
-            <input type="password" id="user-pass" placeholder="Senha">
-            <button class="btn" id="btnLogin" onclick="autenticar()">Entrar</button>
-        </div>
-    </div>
+  const [loginData, setLoginData] = useState({ identifier: '', password: '' });
+  const [newUser, setNewUser] = useState({ nome: '', email: '', tipo: 'Usuario', permissoes: '' });
+  const [surveyData, setSurveyData] = useState({ mes: 'Fev 26', contrato: '', nota: null, feedback: '' });
 
-    <div class="view" id="view-dashboard">
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 id="welcome-msg" style="font-size: 0.9rem;">Painel de Indicadores</h3>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-gestao-master" onclick="abrirGestaoUsuarios()" class="btn-outline btn-usuarios" style="display:none;">👥 USUÁRIOS</button>
-                    <button id="btn-nova-pesquisa" onclick="abrirFormulario()" class="btn-outline" style="display:none;">+ AVALIAR</button>
-                    <button onclick="exportarExcel()" class="btn-outline btn-excel">⬇ EXCEL</button>
-                    <button onclick="abrirTrocaSenha()" class="btn-outline btn-config">⚙ SENHA</button>
-                    <button onclick="location.reload()" style="background:none; border:none; color:white; cursor:pointer; font-size: 10px; opacity: 0.5;">SAIR ↳</button>
-                </div>
-            </div>
-            
-            <div class="filter-group">
-                <div><label>Mês</label><select id="f-mes" onchange="acionarFiltros()"></select></div>
-                <div><label>Unidade</label><select id="f-unidade" onchange="acionarFiltros()"></select></div>
-                <div><label>Cliente</label><select id="f-cliente" onchange="acionarFiltros()"></select></div>
-                <div><label>Contrato</label><select id="f-contrato" onchange="acionarFiltros()"></select></div>
-            </div>
+  // RÉGUA TÉCNICA MAKRO
+  const ZONA_COLORS = {
+    critica: '#f14c4c',         
+    aperfeicoamento: '#fbbd4c', 
+    qualidade: '#34b474',       
+    excelencia: '#048c7c'       
+  };
 
-            <div class="grid-metrics">
-                <div class="card-metric"><span>Total</span><h2 id="m-total">0</h2></div>
-                <div class="card-metric" style="color:var(--verde-nps)"><span>Promotores</span><h2 id="m-promotores">0</h2></div>
-                <div class="card-metric" style="color:#FFCC00"><span>Neutros</span><h2 id="m-neutros">0</h2></div>
-                <div class="card-metric" style="color:var(--vermelho-nps)"><span>Detratores</span><h2 id="m-detratores">0</h2></div>
-                <div class="card-metric" id="card-nps-total"><span>NPS Score</span><h2 id="m-nps">0</h2></div>
-            </div>
+  const getStatusColor = (score) => {
+    if (score <= 0) return ZONA_COLORS.critica;
+    if (score <= 50) return ZONA_COLORS.aperfeicoamento;
+    if (score <= 75) return ZONA_COLORS.qualidade;
+    return ZONA_COLORS.excelencia;
+  };
 
-            <div style="height: 250px; margin-bottom: 30px;"><canvas id="npsChart"></canvas></div>
+  const getStatusLabel = (score) => {
+    if (score <= 0) return "Zona Crítica";
+    if (score <= 50) return "Zona de Aperfeiçoamento";
+    if (score <= 75) return "Zona de Qualidade";
+    return "Zona de Excelência";
+  };
 
-            <h4 style="font-size: 10px; text-transform: uppercase; margin-bottom: 10px; color: var(--vermelho-nps);">Histórico Recente</h4>
-            <div class="table-wrapper">
-                <table id="tabela-historico">
-                    <thead><tr><th>Mês</th><th>Cliente / Contrato</th><th>Nota</th><th>Feedback</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+  const fetchFromGAS = async (params) => {
+    const url = new URL(SCRIPT_URL);
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+    const response = await fetch(url);
+    return await response.json();
+  };
 
-    <div class="view" id="view-usuarios">
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h2 id="titulo-gestao">Gestão de Usuários</h2>
-                <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
-            </div>
-            
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <h4 id="subtitulo-gestao" style="font-size: 10px; margin-bottom: 10px;">CADASTRAR NOVO ACESSO</h4>
-                <div class="filter-group">
-                    <div><label>Nome Completo</label><input type="text" id="adm-nome"></div>
-                    <div><label>E-mail (Login)</label><input type="text" id="adm-email"></div>
-                    <div><label>Nível</label>
-                        <select id="adm-tipo">
-                            <option value="Usuario">Usuário (Cliente)</option>
-                            <option value="Gerente de Unidade">Gerente de Unidade</option>
-                            <option value="ADM">Administrador</option>
-                            <option value="ADM MASTER">ADM Master</option>
-                        </select>
-                    </div>
-                    <div><label>Permissões (Cód ou Unidade)</label><input type="text" id="adm-perm" placeholder="Ex: CTR-01 ou Porto"></div>
-                </div>
-                <button id="btnSalvarUsuario" onclick="cadastrarUsuario()" class="btn" style="padding: 10px; font-size: 10px;">SALVAR USUÁRIO</button>
-                <button id="btnCancelarEdicao" onclick="limparFormularioUsuario()" class="btn-outline" style="display:none; width:100%; margin-top:5px; border-color:#aaa; color:#aaa;">CANCELAR EDIÇÃO</button>
-            </div>
+  const handleLogin = async (e) => {
+    if (e) e.preventDefault();
+    if (!loginData.identifier || !loginData.password) return alert("Preencha os campos.");
+    setLoading(true);
+    try {
+      const res = await fetchFromGAS({ action: 'login', user: loginData.identifier, pass: loginData.password });
+      if (res.result === "success") {
+        setUserProfile({ nome: res.nome, email: res.email, tipo: res.tipo, permissoes: res.permissoes || [] });
+        setDbContratosGlobal(res.metrics?.listaContratos || []);
+        setResponses(res.metrics?.baseDados || []);
+        setUsersList(res.admData || []);
+        setView(loginData.password === "12345" ? 'password' : 'dashboard');
+      } else { alert("Acesso negado. Verifique seu login e senha."); }
+    } catch (err) { alert("Erro na ligação com a base de dados."); }
+    finally { setLoading(false); }
+  };
 
-            <div class="table-wrapper">
-                <table id="tabela-usuarios">
-                    <thead><tr><th>Nome</th><th>Login</th><th>Tipo</th><th>Permissões</th><th>Ações</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+  const saveSurvey = async (e) => {
+    if (e) e.preventDefault();
+    if (surveyData.nota === null) return alert("Selecione uma nota");
+    setLoading(true);
+    try {
+      const contratoInfo = dbContratosGlobal.find(c => c.exibicao === surveyData.contrato);
+      const params = {
+        action: 'survey',
+        'Mes Referente': surveyData.mes,
+        'Nome do Contrato': surveyData.contrato,
+        'Número do Contrato': contratoInfo?.numero || '',
+        'Nota': surveyData.nota,
+        'Feedback': surveyData.feedback,
+        'Nome do Cliente': contratoInfo?.cliente || userProfile?.nome,
+        'Email do Responsável': userProfile?.email,
+        'Nome do Responsável': userProfile?.nome
+      };
+      await fetch(`${SCRIPT_URL}?${new URLSearchParams(params).toString()}`, { method: 'POST' });
+      alert("Avaliação enviada!");
+      window.location.reload();
+    } catch (err) { alert("Erro ao gravar os dados."); }
+    finally { setLoading(false); }
+  };
 
-    <div class="view" id="view-formulario">
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h2>Nova Avaliação</h2>
-                <button onclick="voltarDash()" class="btn-outline">VOLTAR</button>
-            </div>
-            <form id="pesquisaMakro">
-                <label>Mês de Referência</label>
-                <select name="Mes Referente" required>
-                    <option value="Jan 26">Jan 26</option><option value="Fev 26" selected>Fev 26</option><option value="Mar 26">Mar 26</option>
-                </select>
-                <label>Contrato</label>
-                <select id="select-contrato" name="Nome do Contrato" onchange="vincularCodigo(this.value)" required></select>
-                <label>Número do Contrato (Referencial)</label>
-                <input type="text" name="Número do Contrato" id="input-num-contrato" readonly style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);">
-                <label>Sua Nota (0 a 10)</label>
-                <div class="nps-container">
-                    <script>
-                        for(let i=0;i<=10;i++) document.write(`<div class="nps-item" style="flex:1; display:flex;"><input type="radio" name="Nota" id="n${i}" value="${i}" onclick="colorirNota(this)" style="display:none"><label for="n${i}" style="flex:1; display:flex; align-items:center; justify-content:center; height:35px; background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); border-radius:5px; cursor:pointer; font-size:11px;">${i}</label></div>`);
-                    </script>
-                </div>
-                <label>Feedback</label>
-                <textarea name="Feedback" rows="3" placeholder="Sua opinião..."></textarea>
-                <input type="hidden" name="Nome do Cliente" id="h-cliente">
-                <input type="hidden" name="Email do Responsável" id="h-email">
-                <input type="hidden" name="Nome do Responsável" id="h-nome">
-                <button type="submit" class="btn" id="btnSubmit">Enviar Avaliação</button>
-            </form>
-        </div>
-    </div>
+  const manageUser = async (mode, loginTarget = null) => {
+    setLoading(true);
+    try {
+      const action = mode === 'add' ? (editingLogin ? 'addUser' : 'addUser') : 'deleteUser';
+      // No script GAS, o addUser geralmente lida com UPDATE se o login já existir
+      const params = {
+        action: action,
+        nome: newUser.nome,
+        login: loginTarget || newUser.email,
+        tipo: newUser.tipo,
+        permissoes: newUser.permissoes
+      };
+      const res = await fetch(`${SCRIPT_URL}?${new URLSearchParams(params).toString()}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.result === "success") {
+        alert(editingLogin ? "Usuário atualizado!" : "Operação concluída!");
+        setEditingLogin(null);
+        setNewUser({ nome: '', email: '', tipo: 'Usuario', permissoes: '' });
+        window.location.reload();
+      }
+    } catch (err) { alert("Erro na gestão de usuários."); }
+    finally { setLoading(false); }
+  };
 
-    <div class="view" id="view-senha">
-        <div class="card" style="max-width: 350px; margin: 50px auto;">
-            <h2 id="titulo-senha" style="text-align: center; margin-bottom: 20px; font-weight: 900;">Alterar Senha</h2>
-            <label>Nova Senha</label>
-            <input type="password" id="new-pass" placeholder="Mínimo 4 caracteres">
-            <label>Confirmar Senha</label>
-            <input type="password" id="confirm-pass" placeholder="Repita a nova senha">
-            <button class="btn" onclick="salvarNovaSenha()">Atualizar Agora</button>
-            <button id="btn-cancelar-senha" class="btn-outline" onclick="voltarDash()" style="width:100%; margin-top:10px; border-color:#666; color:#666">CANCELAR</button>
-        </div>
-    </div>
-</div>
-
-<footer>MARKETING | MAKRO ENGENHARIA © 2026</footer>
-
-<script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
-    let dadosBrutos = [];
-    let dadosFiltradosAtuais = [];
-    let dbContratosGlobal = [];
-    let meusContratosCodigos = []; 
-    let meuGrafico = null;
-    let userTipo = "";
-    let userEmailLogado = "";
-    let listaUsuariosMaster = [];
-    let modoEdicaoUsuario = false;
-
-    function normalizarMes(valor) {
-        if (!valor) return "S/M";
-        if (typeof valor === 'string' && valor.length === 6) return valor;
-        const data = new Date(valor);
-        if (!isNaN(data.getTime())) {
-            const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-            return `${meses[data.getMonth()]} ${data.getFullYear().toString().substring(2)}`;
-        }
-        return valor.toString();
-    }
-
-    function colorirNota(input) {
-        const nota = parseInt(input.value);
-        const labels = document.querySelectorAll('.nps-item label');
-        labels.forEach(l => {
-            l.style.backgroundColor = "rgba(255,255,255,0.1)";
-            l.style.color = "white";
-        });
-        const labelAtivo = document.querySelector(`label[for="${input.id}"]`);
-        if (nota >= 0 && nota <= 6) labelAtivo.style.backgroundColor = "var(--vermelho-nps)";
-        else if (nota >= 7 && nota <= 8) { labelAtivo.style.backgroundColor = "#FFCC00"; labelAtivo.style.color = "black"; }
-        else if (nota >= 9 && nota <= 10) labelAtivo.style.backgroundColor = "var(--verde-nps)";
-    }
-
-    function abrirFormulario() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-formulario').classList.add('active');
-    }
-
-    function abrirGestaoUsuarios() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-usuarios').classList.add('active');
-        renderizarTabelaUsuarios();
-    }
-
-    function voltarDash() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-dashboard').classList.add('active');
-    }
-
-    function abrirTrocaSenha() {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-senha').classList.add('active');
-        document.getElementById('btn-cancelar-senha').style.display = 'inline-flex';
-        document.getElementById('titulo-senha').innerText = "Alterar Senha";
-    }
-
-    function autenticar() {
-        const user = document.getElementById('user-login').value, pass = document.getElementById('user-pass').value, btn = document.getElementById('btnLogin');
-        if(!user || !pass) return alert("Preencha os campos.");
-        btn.innerText = "VALIDANDO..."; btn.disabled = true;
-
-        fetch(`${scriptURL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
-        .then(res => res.json()).then(res => {
-            if(res.result === "success") {
-                userTipo = res.tipo;
-                userEmailLogado = res.email;
-                dbContratosGlobal = res.metrics.listaContratos;
-                meusContratosCodigos = res.permissoes; 
-                listaUsuariosMaster = res.admData || [];
-
-                if (pass === "12345") {
-                    alert("⚠️ Segurança Makro: Identificamos o uso da senha padrão. Você deve alterá-la.");
-                    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                    document.getElementById('view-senha').classList.add('active');
-                    document.getElementById('btn-cancelar-senha').style.display = 'none';
-                    return;
-                }
-                
-                document.getElementById('view-login').classList.remove('active');
-                document.getElementById('view-dashboard').classList.add('active');
-                document.getElementById('welcome-msg').innerText = `${res.tipo}: ${res.nome}`;
-                
-                if(userTipo === "ADM MASTER") document.getElementById('btn-gestao-master').style.display = "inline-flex";
-
-                const selC = document.getElementById('select-contrato');
-                selC.innerHTML = '<option value="">Selecione...</option>';
-                dbContratosGlobal.forEach(info => {
-                    if(userTipo === "ADM" || userTipo === "ADM MASTER" || meusContratosCodigos.includes(info.numero.toString()) || meusContratosCodigos.includes(info.unidade)) {
-                        selC.innerHTML += `<option value="${info.exibicao}">${info.exibicao}</option>`;
-                    }
-                });
-
-                dadosBrutos = (res.metrics.baseDados || []).map(item => ({...item, mes: normalizarMes(item.mes)}));
-                if(userTipo === "Usuario") document.getElementById('btn-nova-pesquisa').style.display = "block";
-
-                atualizarOpcoesFiltros();
-                aplicarFiltros();
-            } else { alert("Acesso negado."); btn.innerText = "Entrar"; btn.disabled = false; }
-        }).catch(() => { alert("Erro na conexão"); btn.innerText = "Entrar"; btn.disabled = false; });
-    }
-
-    function renderizarTabelaUsuarios() {
-        const tbody = document.querySelector('#tabela-usuarios tbody');
-        tbody.innerHTML = listaUsuariosMaster.map(u => `
-            <tr>
-                <td>${u.nome}</td>
-                <td>${u.login}</td>
-                <td style="color:var(--vermelho-nps); font-weight:700;">${u.tipo}</td>
-                <td>${u.permissoes || 'Global'}</td>
-                <td>
-                    <button onclick="prepararEdicaoUsuario('${u.nome}', '${u.login}', '${u.tipo}', '${u.permissoes}')" class="btn-outline" style="padding:2px 5px; border-color:#FFCC00; color:#FFCC00; margin-right:5px;">✎</button>
-                    <button onclick="deletarUsuario('${u.login}')" class="btn-outline" style="padding:2px 5px;">✖</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    function prepararEdicaoUsuario(nome, login, tipo, perm) {
-        modoEdicaoUsuario = true;
-        document.getElementById('adm-nome').value = nome;
-        document.getElementById('adm-email').value = login;
-        document.getElementById('adm-email').disabled = true;
-        document.getElementById('adm-tipo').value = tipo;
-        document.getElementById('adm-perm').value = perm === 'undefined' ? '' : perm;
-        
-        document.getElementById('subtitulo-gestao').innerText = "EDITAR USUÁRIO";
-        document.getElementById('btnSalvarUsuario').innerText = "ATUALIZAR USUÁRIO";
-        document.getElementById('btnCancelarEdicao').style.display = "block";
-    }
-
-    function limparFormularioUsuario() {
-        modoEdicaoUsuario = false;
-        document.getElementById('adm-nome').value = "";
-        document.getElementById('adm-email').value = "";
-        document.getElementById('adm-email').disabled = false;
-        document.getElementById('adm-tipo').value = "Usuario";
-        document.getElementById('adm-perm').value = "";
-        
-        document.getElementById('subtitulo-gestao').innerText = "CADASTRAR NOVO ACESSO";
-        document.getElementById('btnSalvarUsuario').innerText = "SALVAR USUÁRIO";
-        document.getElementById('btnCancelarEdicao').style.display = "none";
-    }
-
-    function cadastrarUsuario() {
-        const dados = {
-            action: modoEdicaoUsuario ? 'editUser' : 'addUser',
-            nome: document.getElementById('adm-nome').value,
-            login: document.getElementById('adm-email').value,
-            tipo: document.getElementById('adm-tipo').value,
-            permissoes: document.getElementById('adm-perm').value
-        };
-        if(!dados.nome || !dados.login) return alert("Preencha Nome e E-mail.");
-        
-        const btn = document.getElementById('btnSalvarUsuario');
-        btn.innerText = "PROCESSANDO..."; btn.disabled = true;
-
-        fetch(`${scriptURL}?${new URLSearchParams(dados).toString()}`, { method: 'POST' })
-        .then(res => res.json())
-        .then(res => {
-            if(res.result === "success") {
-                alert(modoEdicaoUsuario ? "Usuário atualizado!" : "Usuário cadastrado!");
-                location.reload();
-            } else {
-                alert("Erro na operação.");
-                btn.innerText = "SALVAR USUÁRIO"; btn.disabled = false;
-            }
-        });
-    }
-
-    function deletarUsuario(login) {
-        if(!confirm(`Tem certeza que deseja excluir o usuário ${login}?`)) return;
-        
-        fetch(`${scriptURL}?action=deleteUser&login=${encodeURIComponent(login)}`, { method: 'POST' })
-        .then(res => res.json())
-        .then(res => {
-            if(res.result === "success") {
-                alert("Usuário removido com sucesso!");
-                location.reload();
-            } else {
-                alert("Erro ao remover usuário.");
-            }
-        });
-    }
-
-    function salvarNovaSenha() {
-        const nPass = document.getElementById('new-pass').value, cPass = document.getElementById('confirm-pass').value;
-        if(nPass.length < 4) return alert("Senha curta.");
-        if(nPass !== cPass) return alert("Senhas diferentes.");
-        fetch(`${scriptURL}?action=changePass&user=${encodeURIComponent(userEmailLogado)}&newPass=${encodeURIComponent(nPass)}`, { method: 'POST' })
-        .then(() => { alert("Sucesso! Logue novamente."); location.reload(); });
-    }
-
-    function acionarFiltros() { atualizarOpcoesFiltros(); aplicarFiltros(); }
-
-    function atualizarOpcoesFiltros() {
-        const selMes = document.getElementById('f-mes'), selUnid = document.getElementById('f-unidade'),
-              selCli = document.getElementById('f-cliente'), selCont = document.getElementById('f-contrato');
-        const valMes = selMes.value || "Todos", valUnid = selUnid.value || "Todas", valCli = selCli.value || "Todos", valCont = selCont.value || "Todos";
-        const popular = (el, lista, padrao, atual) => {
-            const itens = [...new Set(lista)].sort();
-            let html = `<option value="${padrao}">${padrao}</option>`;
-            itens.forEach(i => { if(i) html += `<option value="${i}" ${i === atual ? 'selected' : ''}>${i}</option>`; });
-            el.innerHTML = html;
-        };
-        popular(selMes, dadosBrutos.map(d => d.mes), "Todos", valMes);
-        const dM = dadosBrutos.filter(d => valMes === "Todos" || d.mes === valMes);
-        popular(selUnid, dM.map(d => d.unidade), "Todas", valUnid);
-        const dU = dM.filter(d => valUnid === "Todas" || d.unidade === valUnid);
-        popular(selCli, dU.map(d => d.cliente), "Todos", valCli);
-        const dC = dU.filter(d => valCli === "Todos" || d.cliente === valCli);
-        popular(selCont, dC.map(d => d.contrato), "Todos", valCont);
-    }
-
-    function aplicarFiltros() {
-        const m = document.getElementById('f-mes').value, u = document.getElementById('f-unidade').value, cl = document.getElementById('f-cliente').value, ct = document.getElementById('f-contrato').value;
-        dadosFiltradosAtuais = dadosBrutos.filter(d => (m === "Todos" || d.mes === m) && (u === "Todas" || d.unidade === u) && (cl === "Todos" || d.cliente === cl) && (ct === "Todos" || d.contrato === ct));
-        const t = dadosFiltradosAtuais.length, p = dadosFiltradosAtuais.filter(x => x.nota >= 9).length, n = dadosFiltradosAtuais.filter(x => x.nota >= 7 && x.nota <= 8).length, det = dadosFiltradosAtuais.filter(x => x.nota <= 6).length;
-        const nps = t > 0 ? Math.round(((p - det) / t) * 100) : 0;
-        document.getElementById('m-total').innerText = t;
-        document.getElementById('m-promotores').innerText = p;
-        document.getElementById('m-neutros').innerText = n;
-        document.getElementById('m-detratores').innerText = det;
-        document.getElementById('m-nps').innerText = nps;
-        document.getElementById('card-nps-total').style.backgroundColor = nps >= 75 ? '#007bff' : nps >= 50 ? '#28a745' : nps >= 0 ? '#FF8C00' : '#ED1C24';
-        renderizarGrafico(dadosFiltradosAtuais);
-        renderizarTabela(dadosFiltradosAtuais);
-    }
-
-    function renderizarTabela(dados) {
-        const tbody = document.querySelector('#tabela-historico tbody');
-        tbody.innerHTML = "";
-        [...dados].reverse().forEach(d => {
-            const cor = d.nota >= 9 ? 'var(--verde-nps)' : d.nota <= 6 ? 'var(--vermelho-nps)' : '#FFCC00';
-            tbody.innerHTML += `<tr><td>${d.mes}</td><td><strong>${d.cliente}</strong><br><span style="opacity:0.6">${d.contrato}</span></td><td><span class="tag-nota" style="background:${cor}">${d.nota}</span></td><td style="max-width:300px; font-style:italic">"${d.feedback || '-'}"</td></tr>`;
-        });
-    }
-
-    function renderizarGrafico(dados) {
-        const labelsMestre = ["Jan 25", "Fev 25", "Mar 25", "Abr 25", "Mai 25", "Jun 25", "Jul 25", "Ago 25", "Set 25", "Out 25", "Nov 25", "Dez 25", "Jan 26", "Fev 26", "Mar 26"];
-        const labels = labelsMestre.filter(m => dadosBrutos.some(d => d.mes === m));
-        const scores = labels.map(m => {
-            const dMes = dados.filter(x => x.mes === m);
-            if(dMes.length === 0) return 0;
-            const p = dMes.filter(x => x.nota >= 9).length, det = dMes.filter(x => x.nota <= 6).length;
-            return Math.round(((p - det) / dMes.length) * 100);
-        });
-        if(meuGrafico) meuGrafico.destroy();
-        Chart.register(ChartDataLabels);
-        meuGrafico = new Chart(document.getElementById('npsChart'), {
-            type: 'bar',
-            data: { labels: labels, datasets: [{ data: scores, backgroundColor: scores.map(s => s >= 75 ? '#007bff' : s >= 50 ? '#28a745' : s >= 0 ? '#FF8C00' : '#ED1C24'), borderRadius: 5 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#fff', anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 } } }, scales: { y: { min: -100, max: 120, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
-        });
-    }
-
-    function exportarExcel() {
-        const dataExport = dadosFiltradosAtuais.map(d => ({ "Mês": d.mes, "Unidade": d.unidade, "Cliente": d.cliente, "Contrato": d.contrato, "Nota": d.nota, "Feedback": d.feedback }));
-        const ws = XLSX.utils.json_to_sheet(dataExport);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "NPS");
-        XLSX.writeFile(wb, `NPS_Makro.xlsx`);
-    }
-
-    function vincularCodigo(exibicao) {
-        const c = dbContratosGlobal.find(x => x.exibicao === exibicao);
-        if(c) { document.getElementById('input-num-contrato').value = c.numero; document.getElementById('h-cliente').value = c.cliente; }
-    }
-
-    document.getElementById('pesquisaMakro').addEventListener('submit', e => {
-        e.preventDefault();
-        const btn = document.getElementById('btnSubmit');
-        btn.disabled = true; btn.innerText = 'ENVIANDO...';
-        fetch(`${scriptURL}?action=survey&${new URLSearchParams(new FormData(e.target)).toString()}`, { method: 'POST' })
-        .then(() => { alert('Enviado!'); location.reload(); });
+  const startEditUser = (u) => {
+    setEditingLogin(u.login);
+    setNewUser({
+      nome: u.nome,
+      email: u.login,
+      tipo: u.tipo,
+      permissoes: u.permissoes || ''
     });
-</script>
-</body>
-</html>
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const changePassword = async (e) => {
+    if (e) e.preventDefault();
+    const newPass = document.getElementById('new-password-field').value;
+    if (!newPass || newPass.length < 4) return alert("Palavra-passe muito curta.");
+    setLoading(true);
+    try {
+      await fetch(`${SCRIPT_URL}?action=changePass&user=${encodeURIComponent(userProfile.email)}&newPass=${encodeURIComponent(newPass)}`, { method: 'POST' });
+      alert("Palavra-passe atualizada! Por favor, faça login novamente.");
+      setView('login');
+    } catch (err) { alert("Erro ao atualizar palavra-passe."); }
+    finally { setLoading(false); }
+  };
+
+  const filteredData = useMemo(() => {
+    return responses.filter(r => {
+      const matchMes = filters.mes === 'Todos' || r.mes === filters.mes;
+      const matchUnid = filters.unidade === 'Todas' || r.unidade === filters.unidade;
+      const matchCli = filters.cliente === 'Todos' || r.cliente === filters.cliente;
+      const matchCont = filters.contrato === 'Todos' || r.contrato === filters.contrato;
+      
+      let matchPerm = true;
+      if (userProfile?.tipo === 'Usuario') {
+        matchPerm = (userProfile.permissoes || []).includes(r.contrato) || (userProfile.permissoes || []).includes(r.unidade);
+      }
+      return matchMes && matchUnid && matchCli && matchCont && matchPerm;
+    });
+  }, [responses, filters, userProfile]);
+
+  const tableData = useMemo(() => {
+    return filteredData.filter(r => {
+      const matchMes = tableFilters.mes === 'Todos' || r.mes === tableFilters.mes;
+      const matchUnid = tableFilters.unidade === 'Todas' || r.unidade === tableFilters.unidade;
+      const matchCli = tableFilters.cliente === 'Todos' || r.cliente === tableFilters.cliente;
+      return matchMes && matchUnid && matchCli;
+    });
+  }, [filteredData, tableFilters]);
+
+  const stats = useMemo(() => {
+    const total = filteredData.length;
+    if (total === 0) return { nps: 0, p: 0, n: 0, d: 0, total: 0 };
+    const p = filteredData.filter(x => x.nota >= 9).length;
+    const n = filteredData.filter(x => x.nota >= 7 && x.nota <= 8).length;
+    const d = filteredData.filter(x => x.nota <= 6).length;
+    return { nps: Math.round(((p - d) / total) * 100), p, n, d, total };
+  }, [filteredData]);
+
+  const monthlyNpsData = useMemo(() => {
+    const uniqueMonths = [...new Set(responses.map(r => r.mes))].sort();
+    return uniqueMonths.map(m => {
+      const dMes = responses.filter(x => x.mes === m); 
+      const p = dMes.filter(x => x.nota >= 9).length;
+      const det = dMes.filter(x => x.nota <= 6).length;
+      const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
+      return { mes: m, score: nps };
+    });
+  }, [responses]);
+
+  const RADIAN = Math.PI / 180;
+  const renderNeedle = (value, cx, cy, iR, oR) => {
+    const clampedValue = Math.max(-100, Math.min(100, value));
+    const ang = 180 - ((clampedValue + 100) / 200) * 180; 
+    const length = (iR + oR) / 2.2;
+    const sin = Math.sin(-RADIAN * ang);
+    const cos = Math.cos(-RADIAN * ang);
+    const r = 6;
+    const x0 = cx;
+    const y0 = cy;
+    const xba = x0 + r * sin;
+    const yba = y0 - r * cos;
+    const xbb = x0 - r * sin;
+    const ybb = y0 + r * cos;
+    const xp = x0 + length * cos;
+    const yp = y0 + length * sin;
+    return (
+      <g key="needle">
+        <circle cx={x0} cy={y0} r={r} fill="#fff" stroke="none" />
+        <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill="#fff" stroke="none" />
+      </g>
+    );
+  };
+
+  const gaugeData = [
+    { name: 'Crítica', value: 100, fill: ZONA_COLORS.critica },       
+    { name: 'Aperfeiçoamento', value: 50, fill: ZONA_COLORS.aperfeicoamento }, 
+    { name: 'Qualidade', value: 25, fill: ZONA_COLORS.qualidade },     
+    { name: 'Excelência', value: 25, fill: ZONA_COLORS.excelencia }     
+  ];
+
+  // FUNÇÃO DE EXPORTAÇÃO MELHORADA
+  const handleExport = (type) => {
+    setExportMenuOpen(false);
+    let dataToExport = [];
+    let fileName = "NPS_Makro_Engenharia";
+
+    if (type === 'all') {
+      dataToExport = responses;
+      fileName += "_Completo";
+    } else if (type === 'filtered') {
+      dataToExport = filteredData;
+      fileName += "_Filtrado";
+    } else if (type === 'month') {
+      dataToExport = responses.filter(r => r.mes === filters.mes);
+      fileName += `_Mes_${filters.mes.replace(' ', '_')}`;
+    }
+
+    if (dataToExport.length === 0) return alert("Nenhum dado para exportar com este critério.");
+
+    const csvRows = [
+      ["Data", "Mes", "Unidade", "Cliente", "Contrato", "Nota", "Feedback"],
+      ...dataToExport.map(r => [r.data, r.mes, r.unidade, r.cliente, r.contrato, r.nota, r.feedback])
+    ];
+    
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `${fileName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const colors = {
+    bg: 'bg-[#010816]',
+    glass: 'bg-white bg-opacity-5 backdrop-blur-xl border border-white border-opacity-10',
+    text: 'text-slate-100'
+  };
+
+  return (
+    <div className={`min-h-screen ${colors.bg} ${colors.text} font-['Ubuntu'] selection:bg-red-500`}>
+      <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet" />
+      
+      <header className="p-6 flex flex-col items-center border-b border-white border-opacity-10 bg-black bg-opacity-20 sticky top-0 z-50 backdrop-blur-md">
+        <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" alt="Makro" className="h-10 mb-2" />
+        <div className="text-[10px] tracking-[4px] opacity-60 font-bold uppercase">Painel NPS | Makro Engenharia</div>
+      </header>
+
+      <main className="max-w-6xl mx-auto p-4 md:p-8">
+        {loading && (
+          <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center backdrop-blur-sm">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-red-600"></div>
+          </div>
+        )}
+
+        {view === 'login' && (
+          <div className="flex flex-col items-center mt-20 animate-fadeIn">
+            <form onSubmit={handleLogin} className={`w-full max-w-sm p-8 rounded-3xl ${colors.glass} shadow-2xl`}>
+              <h2 className="text-2xl font-bold text-center mb-8 tracking-tighter uppercase">Acesso Makro</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold opacity-40 mb-1 ml-1">Login</label>
+                  <input 
+                    className="w-full bg-white/10 p-4 rounded-xl outline-none" 
+                    placeholder="Seu login" 
+                    type="text"
+                    required
+                    onChange={(e) => setLoginData({...loginData, identifier: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold opacity-40 mb-1 ml-1">Palavra-passe</label>
+                  <input 
+                    type="password" 
+                    className="w-full bg-white/10 p-4 rounded-xl outline-none" 
+                    placeholder="••••••••" 
+                    required
+                    onChange={(e) => setLoginData({...loginData, password: e.target.value})} 
+                  />
+                </div>
+                <button type="submit" className="w-full bg-red-600 p-4 rounded-xl font-bold uppercase hover:bg-red-700 transition">Entrar no Painel</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {view === 'dashboard' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="text-red-600" size={32}/>
+                <div>
+                  <h3 className="text-xs font-bold opacity-50 uppercase tracking-widest">{userProfile?.tipo}</h3>
+                  <p className="font-bold text-xl tracking-tight">{userProfile?.nome}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 relative">
+                {userProfile?.tipo === 'ADM MASTER' && (
+                  <button onClick={() => setView('users')} className="p-2 bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 transition" title="Usuários"><UserPlus size={18}/></button>
+                )}
+                
+                {/* BOTÃO DE EXCEL COM MENU DROP DOWN */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setExportMenuOpen(!exportMenuOpen)} 
+                    className="p-2 bg-green-600 rounded-lg shadow-lg hover:bg-green-700 transition flex items-center gap-1" 
+                    title="Exportar Dados"
+                  >
+                    <FileSpreadsheet size={18}/>
+                    <Plus size={10} className={`transition-transform ${exportMenuOpen ? 'rotate-45' : ''}`}/>
+                  </button>
+                  
+                  {exportMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-[#010816] border border-white/10 shadow-2xl z-[60] overflow-hidden animate-fadeIn">
+                      <div className="p-2 text-[8px] uppercase font-bold opacity-30 tracking-widest bg-white/5">Opções de Extração</div>
+                      <button onClick={() => handleExport('filtered')} className="w-full text-left p-3 text-[10px] font-bold uppercase hover:bg-white/5 transition flex items-center gap-2">
+                        <Filter size={14} className="text-green-500"/> Exportar Filtrado
+                      </button>
+                      <button onClick={() => handleExport('all')} className="w-full text-left p-3 text-[10px] font-bold uppercase hover:bg-white/5 transition border-t border-white/5 flex items-center gap-2">
+                        <Download size={14} className="text-blue-500"/> Exportar Tudo
+                      </button>
+                      {filters.mes !== 'Todos' && (
+                        <button onClick={() => handleExport('month')} className="w-full text-left p-3 text-[10px] font-bold uppercase hover:bg-white/5 transition border-t border-white/5 flex items-center gap-2">
+                          <MessageSquare size={14} className="text-orange-500"/> Mês: {filters.mes}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={() => setView('password')} className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition" title="Mudar Palavra-passe"><Key size={18}/></button>
+                <button onClick={() => setView('survey')} className="p-2 bg-red-600 rounded-lg shadow-lg shadow-red-600/20 active:scale-90 transition" title="Nova Avaliação"><Plus size={18}/></button>
+                <button onClick={() => window.location.reload()} className="p-2 bg-white/5 rounded-lg hover:bg-red-600/20 transition" title="Sair"><LogOut size={18}/></button>
+              </div>
+            </div>
+
+            <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-2xl ${colors.glass}`}>
+              <div>
+                <label className="text-[9px] uppercase font-bold opacity-40 mb-1 block">Mês (Global)</label>
+                <select className="w-full bg-white/5 p-2 rounded-lg text-xs outline-none border border-white/10" value={filters.mes} onChange={(e) => setFilters({...filters, mes: e.target.value})}>
+                  <option value="Todos">Todos</option>
+                  {[...new Set(responses.map(r => r.mes))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[9px] uppercase font-bold opacity-40 mb-1 block">Unidade</label>
+                <select className="w-full bg-white/5 p-2 rounded-lg text-xs outline-none border border-white/10" value={filters.unidade} onChange={(e) => setFilters({...filters, unidade: e.target.value})}>
+                  <option value="Todas">Todas</option>
+                  {[...new Set(responses.map(r => r.unidade))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[9px] uppercase font-bold opacity-40 mb-1 block">Cliente</label>
+                <select className="w-full bg-white/5 p-2 rounded-lg text-xs outline-none border border-white/10" value={filters.cliente} onChange={(e) => setFilters({...filters, cliente: e.target.value})}>
+                  <option value="Todos">Todos</option>
+                  {[...new Set(responses.map(r => r.cliente))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[9px] uppercase font-bold opacity-40 mb-1 block">Contrato</label>
+                <select className="w-full bg-white/5 p-2 rounded-lg text-xs outline-none border border-white/10" value={filters.contrato} onChange={(e) => setFilters({...filters, contrato: e.target.value})}>
+                  <option value="Todos">Todos</option>
+                  {[...new Set(responses.map(r => r.contrato))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* HISTÓRICO NPS */}
+              <div className={`lg:col-span-2 p-6 rounded-3xl ${colors.glass} min-h-[420px]`}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                  <h4 className="font-bold text-xs uppercase opacity-60 flex items-center gap-2"><TrendingUp size={16}/> Histórico NPS</h4>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-[8px] font-bold uppercase tracking-wider">
+                    {gaugeData.map((zone) => (
+                      <span key={zone.name} className="flex items-center gap-1" style={{color: zone.fill}}>
+                        <div className="w-2 h-2 rounded-full shadow-sm" style={{backgroundColor: zone.fill}}/> {zone.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyNpsData}>
+                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.05} vertical={false}/>
+                      <XAxis dataKey="mes" stroke="#ffffff22" fontSize={10}/>
+                      <YAxis stroke="#ffffff22" domain={[-100, 100]} fontSize={10}/>
+                      <Tooltip 
+                        cursor={{fill: '#ffffff08'}} 
+                        contentStyle={{backgroundColor: '#010816', border: '1px solid #ffffff11', borderRadius: '12px', fontSize: '10px'}}
+                      />
+                      <Bar dataKey="score" radius={[6, 6, 0, 0]}>
+                        {monthlyNpsData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getStatusColor(entry.score)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* NPS ATUAL (VELOCÍMETRO) */}
+              <div className={`p-6 rounded-3xl ${colors.glass} flex flex-col items-center relative overflow-hidden`}>
+                <div className="w-full mb-2 flex justify-between items-start">
+                  <h4 className="font-bold text-xs uppercase opacity-60 flex items-center gap-2"><Gauge size={16}/> NPS Atual</h4>
+                </div>
+
+                <div className="text-center mb-4 animate-fadeIn">
+                  <h2 className="text-6xl font-black tracking-tighter" style={{ color: getStatusColor(stats.nps) }}>
+                    {stats.nps}
+                  </h2>
+                  <p className="text-[11px] font-bold uppercase opacity-80 mt-1 tracking-widest" style={{ color: getStatusColor(stats.nps) }}>
+                    {getStatusLabel(stats.nps)}
+                  </p>
+                </div>
+
+                <div className="w-full h-[220px] flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={gaugeData}
+                        cx="50%"
+                        cy="80%"
+                        startAngle={180}
+                        endAngle={0}
+                        innerRadius="65%"
+                        outerRadius="95%"
+                        paddingAngle={0}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {gaugeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      {renderNeedle(stats.nps, 137, 176, 90, 130)}
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="w-full flex justify-between px-10 text-[9px] font-bold opacity-30 mt-[-20px] uppercase tracking-widest">
+                  <span>-100</span>
+                  <span>0</span>
+                  <span>50</span>
+                  <span>75</span>
+                  <span>100</span>
+                </div>
+              </div>
+            </div>
+
+            {/* TABELA VOZ DO CLIENTE COM FILTROS LOCAIS */}
+            <div className={`p-6 rounded-3xl ${colors.glass} overflow-hidden`}>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h4 className="font-bold text-xs uppercase opacity-60 flex items-center gap-2">
+                  <MessageSquare size={16}/> Voz do Cliente (Feedbacks Técnicos)
+                </h4>
+                
+                <div className="flex flex-wrap items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/10">
+                  <div className="flex items-center gap-2 border-r border-white/10 pr-3">
+                    <Filter size={12} className="text-red-500 opacity-70"/>
+                    <span className="text-[9px] uppercase font-black opacity-40 tracking-wider">Mês:</span>
+                    <select 
+                      className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white"
+                      value={tableFilters.mes}
+                      onChange={(e) => setTableFilters({...tableFilters, mes: e.target.value})}
+                    >
+                      <option value="Todos" className="bg-slate-900">Todos</option>
+                      {[...new Set(responses.map(r => r.mes))].filter(Boolean).sort().map(val => (
+                        <option key={val} value={val} className="bg-slate-900">{val}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 border-r border-white/10 pr-3">
+                    <span className="text-[9px] uppercase font-black opacity-40 tracking-wider">Unidade:</span>
+                    <select 
+                      className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white"
+                      value={tableFilters.unidade}
+                      onChange={(e) => setTableFilters({...tableFilters, unidade: e.target.value})}
+                    >
+                      <option value="Todas" className="bg-slate-900">Todas</option>
+                      {[...new Set(responses.map(r => r.unidade))].filter(Boolean).sort().map(val => (
+                        <option key={val} value={val} className="bg-slate-900">{val}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] uppercase font-black opacity-40 tracking-wider">Cliente:</span>
+                    <select 
+                      className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white"
+                      value={tableFilters.cliente}
+                      onChange={(e) => setTableFilters({...tableFilters, cliente: e.target.value})}
+                    >
+                      <option value="Todos" className="bg-slate-900">Todos</option>
+                      {[...new Set(responses.map(r => r.cliente))].filter(Boolean).sort().map(val => (
+                        <option key={val} value={val} className="bg-slate-900">{val}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-white/5 text-[9px] font-bold uppercase text-red-500 tracking-widest">
+                      <th className="p-4 rounded-l-xl">Data</th>
+                      <th className="p-4">Contrato</th>
+                      <th className="p-4">Nome Contrato</th>
+                      <th className="p-4">Cliente / Empresa</th>
+                      <th className="p-4 text-center">Nota</th>
+                      <th className="p-4 rounded-r-xl">Comentário / Feedback</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {tableData.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="p-20 text-center opacity-20 uppercase font-bold text-xs">Nenhum registo encontrado com os filtros locais</td>
+                      </tr>
+                    ) : (
+                      tableData.map((r, i) => (
+                        <tr key={i} className="hover:bg-white/5 transition-colors group">
+                          <td className="p-4 text-[10px] whitespace-nowrap opacity-60">
+                            {r.data ? new Date(r.data).toLocaleDateString('pt-BR') : '—'}
+                          </td>
+                          <td className="p-4 text-[11px] font-bold text-blue-400">
+                            {r['Número do Contrato'] || r.contrato?.split('/')[0] || '—'}
+                          </td>
+                          <td className="p-4 text-[10px] opacity-80 uppercase max-w-[150px] truncate">
+                            {r.contrato || '—'}
+                          </td>
+                          <td className="p-4 text-[11px] font-bold uppercase truncate max-w-[180px]">
+                            {r.cliente || '—'}
+                          </td>
+                          <td className="p-4 text-center">
+                            <span className="inline-block px-3 py-1 rounded-lg text-[11px] font-black" style={{ 
+                              backgroundColor: `${getStatusColor(r.nota * 10 - 25)}22`,
+                              color: getStatusColor(r.nota * 10 - 25)
+                            }}>
+                              {r.nota}
+                            </span>
+                          </td>
+                          <td className="p-4 text-[11px] italic opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed max-w-[300px]">
+                            "{r.feedback || <span className="opacity-30">Sem comentário</span>}"
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW: GESTÃO DE USUÁRIOS */}
+        {view === 'users' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2">
+                <UserPlus className="text-blue-500"/> Gestão de Usuários
+              </h2>
+              <button onClick={() => setView('dashboard')} className="px-4 py-2 bg-white/10 rounded-lg text-xs font-bold hover:bg-white/20 flex items-center gap-2">
+                <ChevronLeft size={14}/> Voltar ao Painel
+              </button>
+            </div>
+
+            <div className={`p-6 rounded-3xl ${colors.glass} border-l-4 ${editingLogin ? 'border-blue-500' : 'border-transparent'} transition-all`}>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-[10px] uppercase font-bold opacity-40 tracking-widest">
+                  {editingLogin ? `Editar Usuário: ${editingLogin}` : 'Novo Cadastro'}
+                </h4>
+                {editingLogin && (
+                  <button 
+                    onClick={() => { setEditingLogin(null); setNewUser({ nome: '', email: '', tipo: 'Usuario', permissoes: '' }); }}
+                    className="p-1 hover:bg-white/10 rounded-full text-red-400 transition"
+                  >
+                    <X size={16}/>
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input 
+                  value={newUser.nome}
+                  placeholder="Nome Completo" 
+                  className="bg-white/5 p-3 rounded-lg border border-white/10 outline-none text-sm focus:border-blue-500 transition" 
+                  onChange={e => setNewUser({...newUser, nome: e.target.value})}
+                />
+                <input 
+                  value={newUser.email}
+                  placeholder="Login de Acesso" 
+                  disabled={!!editingLogin}
+                  className={`bg-white/5 p-3 rounded-lg border border-white/10 outline-none text-sm focus:border-blue-500 transition ${editingLogin ? 'opacity-50' : ''}`} 
+                  onChange={e => setNewUser({...newUser, email: e.target.value})}
+                />
+                <select 
+                  value={newUser.tipo}
+                  className="bg-white/5 p-3 rounded-lg border border-white/10 outline-none text-sm focus:border-blue-500" 
+                  onChange={e => setNewUser({...newUser, tipo: e.target.value})}
+                >
+                  <option value="Usuario" className="bg-slate-900">Usuário Comum</option>
+                  <option value="Gerente" className="bg-slate-900">Gerente</option>
+                  <option value="ADM" className="bg-slate-900">Administrador</option>
+                  <option value="ADM MASTER" className="bg-slate-900">ADM Master</option>
+                </select>
+                <input 
+                  value={newUser.permissoes}
+                  placeholder="Contratos (Ex: CTR001,CTR002)" 
+                  className="bg-white/5 p-3 rounded-lg border border-white/10 outline-none text-sm focus:border-blue-500 transition" 
+                  onChange={e => setNewUser({...newUser, permissoes: e.target.value})}
+                />
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button 
+                  onClick={() => manageUser('add')} 
+                  className={`px-6 py-3 rounded-xl font-bold uppercase text-xs shadow-lg transition active:scale-95 ${editingLogin ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
+                >
+                  {editingLogin ? 'Atualizar Acesso' : 'Salvar Novo Acesso'}
+                </button>
+                {editingLogin && (
+                   <button 
+                   onClick={() => { setEditingLogin(null); setNewUser({ nome: '', email: '', tipo: 'Usuario', permissoes: '' }); }}
+                   className="px-6 py-3 bg-white/5 rounded-xl font-bold uppercase text-xs hover:bg-white/10 transition"
+                 >
+                   Cancelar
+                 </button>
+                )}
+              </div>
+            </div>
+
+            <div className={`rounded-3xl overflow-hidden ${colors.glass}`}>
+              <table className="w-full text-xs text-left">
+                <thead className="bg-white/10 text-blue-400 font-bold uppercase text-[10px]">
+                  <tr>
+                    <th className="p-4">Nome</th>
+                    <th className="p-4">Login</th>
+                    <th className="p-4">Tipo</th>
+                    <th className="p-4 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {usersList.map(u => (
+                    <tr key={u.login} className={`hover:bg-white/5 transition-colors group ${editingLogin === u.login ? 'bg-blue-500/10' : ''}`}>
+                      <td className="p-4 font-bold">{u.nome}</td>
+                      <td className="p-4 opacity-50">{u.login}</td>
+                      <td className="p-4"><span className="px-2 py-1 rounded bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase">{u.tipo}</span></td>
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <button 
+                            className="text-blue-400 hover:text-blue-300 transition" 
+                            onClick={() => startEditUser(u)}
+                            title="Editar Usuário"
+                          >
+                            <Pencil size={16}/>
+                          </button>
+                          <button 
+                            className="text-red-500 hover:text-red-400 transition" 
+                            onClick={() => { if(confirm('Deseja realmente excluir este acesso?')) manageUser('delete', u.login); }}
+                            title="Excluir Usuário"
+                          >
+                            <Trash2 size={16}/>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW: ALTERAR PALAVRA-PASSE */}
+        {view === 'password' && (
+          <div className="flex flex-col items-center mt-20 animate-fadeIn">
+            <form onSubmit={changePassword} className={`w-full max-w-sm p-8 rounded-3xl ${colors.glass} border-t-8 border-orange-500 shadow-2xl`}>
+              <div className="flex flex-col items-center mb-6">
+                <div className="p-4 bg-orange-600/20 rounded-full mb-4"><Key className="text-orange-500" size={32}/></div>
+                <h2 className="text-xl font-bold text-center tracking-tight">Alterar Palavra-passe</h2>
+                <p className="text-center text-xs opacity-50 mt-2 leading-relaxed">Defina uma nova palavra-passe corporativa.</p>
+              </div>
+              <div className="space-y-4">
+                <input 
+                  id="new-password-field"
+                  className="w-full bg-white/10 p-4 rounded-xl outline-none focus:ring-2 ring-orange-500 transition-all" 
+                  type="password" 
+                  placeholder="Nova Palavra-passe" 
+                  required 
+                />
+                <button type="submit" className="w-full bg-orange-600 p-4 rounded-xl font-bold uppercase shadow-lg shadow-orange-900/20 active:scale-95 transition">Atualizar Agora</button>
+                <button type="button" onClick={() => setView('dashboard')} className="w-full text-xs font-bold opacity-30 hover:opacity-100 transition uppercase">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* VIEW: NOVA PESQUISA (SURVEY) */}
+        {view === 'survey' && (
+          <div className="max-w-xl mx-auto animate-fadeIn">
+            <form onSubmit={saveSurvey} className={`p-8 rounded-3xl ${colors.glass} border-t-8 border-red-600 shadow-2xl`}>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold tracking-tight">AVALIAÇÃO TÉCNICA</h2>
+                <button type="button" onClick={() => setView('dashboard')} className="text-white/40 uppercase text-[10px] font-bold hover:text-white transition">Voltar</button>
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[9px] font-bold uppercase opacity-40 ml-1 mb-1 block tracking-widest">Mês de Referência</label>
+                  <select className="w-full bg-white/5 p-4 rounded-xl border border-white/10 outline-none text-sm" required onChange={e => setSurveyData({...surveyData, mes: e.target.value})}>
+                    <option value="Fev 26">Fevereiro 2026</option><option value="Mar 26">Março 2026</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase opacity-40 ml-1 mb-1 block tracking-widest">Contrato / Projeto</label>
+                  <select className="w-full bg-white/5 p-4 rounded-xl border border-white/10 outline-none text-sm" required onChange={e => setSurveyData({...surveyData, contrato: e.target.value})}>
+                    <option value="">Selecione o Contrato...</option>
+                    {dbContratosGlobal.map(c => <option key={c.exibicao} value={c.exibicao} className="bg-slate-900">{c.exibicao}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase opacity-40 ml-1 mb-2 block tracking-widest">Satisfação Geral (0 a 10)</label>
+                  <div className="flex justify-between gap-1 overflow-x-auto pb-2 custom-scrollbar">
+                    {[...Array(11).keys()].map(n => (
+                      <button key={n} type="button" onClick={() => setSurveyData({...surveyData, nota: n})}
+                        className={`w-10 h-10 min-w-[35px] rounded-lg font-bold text-sm transition-all ${surveyData.nota === n ? 'bg-red-600 text-white scale-110 shadow-lg' : 'bg-white/5 border border-white/10 text-white/40'}`}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea className="w-full bg-white/5 p-4 rounded-xl border border-white/10 outline-none h-28 text-sm resize-none" placeholder="O que motivou a sua nota?" onChange={e => setSurveyData({...surveyData, feedback: e.target.value})} />
+                <button type="submit" className="w-full bg-red-600 p-4 rounded-2xl font-bold uppercase shadow-xl hover:bg-red-700 transition active:scale-95">Registar Avaliação</button>
+              </div>
+            </form>
+          </div>
+        )}
+      </main>
+
+      <footer className="mt-20 p-10 text-center opacity-30 text-[9px] uppercase font-bold tracking-[4px]">Marketing & Qualidade | Makro Engenharia © 2026</footer>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.2s ease forwards; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ED1C24; }
+        
+        table { border-spacing: 0 8px; border-collapse: separate; }
+        tbody tr { background: rgba(255,255,255,0.02); }
+        tbody tr:hover { background: rgba(255,255,255,0.05); }
+        th { border: none; }
+        td { border: none; }
+      `}} />
+    </div>
+  );
+};
+
+export default App;

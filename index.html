@@ -3,401 +3,456 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS - Makro Engenharia v02</title>
-    
-    <!-- Fontes -->
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
+    <title>Painel NPS - Makro Engenharia v03</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React e ReactDOM (Versão Estável 18.2.0) -->
-    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-    
-    <!-- Babel para transformar JSX em tempo real -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Dependência necessária para o Recharts rodar em UMD -->
     <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
-    
-    <!-- Recharts (UMD Build corrigido para evitar ReferenceError) -->
     <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-    
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
     <style>
-        body { font-family: 'Ubuntu', sans-serif; background-color: #010816; color: #f1f5f9; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
+        body { font-family: 'Montserrat', sans-serif; background-color: #010816; color: #f1f5f9; margin: 0; }
+        .tv-mode-bg { background-color: #e9eef3 !important; color: #333 !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ED1C24; }
-        table { border-spacing: 0 8px; border-collapse: separate; }
-        tbody tr { background: rgba(255,255,255,0.02); transition: background 0.2s; }
-        tbody tr:hover { background: rgba(255,255,255,0.05); }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .animate-slide { animation: slideIn 0.3s ease forwards; }
+        
+        .tv-sidebar { width: 450px; background: white; height: 100vh; position: relative; padding: 4rem; display: flex; flex-direction: column; justify-content: center; box-shadow: 10px 0 30px rgba(0,0,0,0.05); z-index: 10; }
+        .tv-sidebar-accent { position: absolute; left: 0; top: 0; width: 40px; height: 100%; background: #011f42; }
+        .tv-main-content { flex: 1; padding: 3rem; background: #e9eef3; display: flex; flex-direction: column; gap: 2rem; position: relative; }
+        .tv-table-container { background: #d1d9e0; border-radius: 40px; padding: 2.5rem; flex: 1; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05); }
+
+        .nps-card-active { border: 2px solid #ED1C24 !important; background: rgba(237, 28, 36, 0.1) !important; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-        
-        // CORREÇÃO: Acessar Recharts através do window para evitar "Recharts is not defined"
-        const { 
-            BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-            ResponsiveContainer, Cell, PieChart, Pie 
-        } = window.Recharts || {};
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } = window.Recharts;
 
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
 
-        // Componente de Ícone Robusto para ambiente HTML
+        // Cores Oficiais da Régua QuestionPro (Red, Yellow, Light Green, Dark Green)
+        const COLORS = {
+            critica: '#EF4136',          // Vermelho
+            aperfeicoamento: '#FDB913',  // Amarelo/Laranja
+            qualidade: '#56C174',        // Verde Claro
+            excelencia: '#00A650',       // Verde Escuro
+            textMuted: 'rgba(255,255,255,0.4)'
+        };
+
+        const getNPSColor = (score) => {
+            if (score >= 75) return COLORS.excelencia;
+            if (score >= 50) return COLORS.qualidade;
+            if (score >= 0) return COLORS.aperfeicoamento;
+            return COLORS.critica;
+        };
+
         const Icon = ({ name, size = 18, className = "" }) => {
-            const [iconHtml, setIconHtml] = useState("");
+            const iconRef = useRef(null);
             useEffect(() => {
-                if (window.lucide && window.lucide.icons[name]) {
-                    const svg = window.lucide.icons[name].toSvg({ size, class: className });
-                    setIconHtml(svg);
+                if (window.lucide && iconRef.current) {
+                    iconRef.current.innerHTML = '';
+                    const i = document.createElement('i');
+                    const lucideName = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+                    i.setAttribute('data-lucide', lucideName);
+                    iconRef.current.appendChild(i);
+                    window.lucide.createIcons({
+                        attrs: { width: size, height: size, class: className, 'stroke-width': 2 }
+                    });
                 }
             }, [name, size, className]);
-            return <span className="inline-flex" dangerouslySetInnerHTML={{ __html: iconHtml }} />;
+            return <span ref={iconRef} className="inline-flex items-center justify-center leading-none"></span>;
+        };
+
+        const Gauge = ({ value, label, sublabel, color, max = 100, min = -100 }) => {
+            const percentage = ((value - min) / (max - min)) * 100;
+            const rotation = -90 + (percentage * 1.8);
+            return (
+                <div className="bg-white rounded-[30px] p-6 shadow-sm flex flex-col items-center justify-center w-full max-w-[320px]">
+                    <div className="relative w-48 h-28 overflow-hidden">
+                        <svg className="w-full h-full" viewBox="0 0 200 110">
+                            <path d="M20,100 A80,80 0 0,1 180,100" fill="none" stroke="#eee" strokeWidth="24" strokeLinecap="round" />
+                            <path d="M20,100 A80,80 0 0,1 180,100" fill="none" stroke={color} strokeWidth="24" strokeLinecap="round" 
+                                  strokeDasharray="251" strokeDashoffset={251 - (251 * (Math.max(0, Math.min(100, percentage)) / 100))} style={{ transition: 'all 1s ease' }} />
+                            <rect x="98" y="40" width="4" height="60" rx="2" fill="#333" 
+                                  style={{ transformOrigin: '100px 100px', transform: `rotate(${rotation}deg)`, transition: 'all 1s ease' }} />
+                            <circle cx="100" cy="100" r="6" fill="#333" />
+                        </svg>
+                    </div>
+                    <div className="text-center mt-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
+                        <p className="text-2xl font-black text-gray-800">{value}{sublabel}</p>
+                    </div>
+                </div>
+            );
         };
 
         const App = () => {
             const [view, setView] = useState('login'); 
             const [loading, setLoading] = useState(false);
-            const [userProfile, setUserProfile] = useState(null);
-            const [responses, setResponses] = useState([]);
+            const [user, setUser] = useState(null);
+            const [data, setData] = useState([]);
             const [usersList, setUsersList] = useState([]);
-            const [dbContratosGlobal, setDbContratosGlobal] = useState([]);
+            const [contractsList, setContractsList] = useState([]);
+            const [tvSlide, setTvSlide] = useState(0); 
+            const [filters, setFilters] = useState({ mes: 'Todos', unidade: 'Todas', cliente: 'Todos', contrato: 'Todos' });
+            
             const [exportMenuOpen, setExportMenuOpen] = useState(false);
             const [editingLogin, setEditingLogin] = useState(null);
-            
-            const [filters, setFilters] = useState({ mes: 'Todos', unidade: 'Todas', cliente: 'Todos', contrato: 'Todos' });
-            const [tableFilters, setTableFilters] = useState({ mes: 'Todos', unidade: 'Todas', cliente: 'Todos' });
-            const [loginData, setLoginData] = useState({ identifier: '', password: '' });
             const [newUser, setNewUser] = useState({ nome: '', email: '', tipo: 'Usuario', permissoes: '' });
 
-            const ZONA_COLORS = {
-                critica: '#f14c4c',         
-                aperfeicoamento: '#fbbd4c', 
-                qualidade: '#34b474',       
-                excelencia: '#048c7c'       
-            };
-
-            const getStatusColor = (score) => {
-                if (score <= 0) return ZONA_COLORS.critica;
-                if (score <= 50) return ZONA_COLORS.aperfeicoamento;
-                if (score <= 75) return ZONA_COLORS.qualidade;
-                return ZONA_COLORS.excelencia;
-            };
-
-            const getStatusLabel = (score) => {
-                if (score <= 0) return "Zona Crítica";
-                if (score <= 50) return "Aperfeiçoamento";
-                if (score <= 75) return "Zona de Qualidade";
-                return "Zona de Excelência";
-            };
-
-            const fetchFromGAS = async (params) => {
-                const url = new URL(SCRIPT_URL);
-                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-                const response = await fetch(url);
-                return await response.json();
-            };
+            const [surveyData, setSurveyData] = useState({
+                mesReferente: 'Fev 26',
+                contrato: '',
+                numContrato: '',
+                cliente: '',
+                nota: null,
+                feedback: ''
+            });
 
             const handleLogin = async (e) => {
                 if (e) e.preventDefault();
+                const u = document.getElementById('li').value;
+                const p = document.getElementById('lp').value;
                 setLoading(true);
                 try {
-                    const res = await fetchFromGAS({ action: 'login', user: loginData.identifier, pass: loginData.password });
+                    const res = await fetch(`${SCRIPT_URL}?action=login&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`).then(r => r.json());
                     if (res.result === "success") {
-                        setUserProfile({ nome: res.nome, email: res.email, tipo: res.tipo, permissoes: res.permissoes || [] });
-                        setDbContratosGlobal(res.metrics?.listaContratos || []);
-                        setResponses(res.metrics?.baseDados || []);
+                        setUser({ nome: res.nome, email: res.email, tipo: res.tipo });
+                        setData(res.metrics?.baseDados || []);
                         setUsersList(res.admData || []);
-                        setView(loginData.password === "12345" ? 'password' : 'dashboard');
-                    } else { alert("Acesso negado. Verifique as suas credenciais."); }
-                } catch (err) { alert("Erro de ligação com o servidor."); }
-                finally { setLoading(false); }
+                        setContractsList(res.metrics?.listaContratos || []);
+                        setView('dashboard');
+                    } else { alert("Acesso inválido."); }
+                } catch (e) { alert("Erro de conexão com o servidor."); }
+                setLoading(false);
             };
 
             const manageUser = async (mode, loginTarget = null) => {
                 setLoading(true);
                 try {
                     const params = {
-                        action: mode === 'delete' ? 'deleteUser' : 'addUser',
+                        action: mode === 'delete' ? 'deleteUser' : (editingLogin ? 'editUser' : 'addUser'),
                         nome: newUser.nome,
                         login: loginTarget || newUser.email,
                         tipo: newUser.tipo,
                         permissoes: newUser.permissoes
                     };
                     const res = await fetch(`${SCRIPT_URL}?${new URLSearchParams(params).toString()}`, { method: 'POST' });
-                    const data = await res.json();
-                    if (data.result === "success") {
-                        alert(editingLogin ? "Usuário atualizado!" : "Operação realizada com sucesso!");
+                    const result = await res.json();
+                    if (result.result === "success") {
+                        alert("Operação realizada com sucesso!");
                         window.location.reload();
                     }
                 } catch (err) { alert("Erro na gestão de usuários."); }
-                finally { setLoading(false); }
+                setLoading(false);
             };
 
-            const filteredData = useMemo(() => {
-                return responses.filter(r => {
-                    const matchMes = filters.mes === 'Todos' || r.mes === filters.mes;
-                    const matchUnid = filters.unidade === 'Todas' || r.unidade === filters.unidade;
-                    const matchCli = filters.cliente === 'Todos' || r.cliente === filters.cliente;
-                    const matchCont = filters.contrato === 'Todos' || r.contrato === filters.contrato;
-                    return matchMes && matchUnid && matchCli && matchCont;
-                });
-            }, [responses, filters]);
+            const handleSurveySubmit = async (e) => {
+                e.preventDefault();
+                if (surveyData.nota === null) return alert("Por favor, selecione uma nota.");
+                setLoading(true);
+                try {
+                    const formData = new FormData();
+                    formData.append("Mes Referente", surveyData.mesReferente);
+                    formData.append("Nome do Contrato", surveyData.contrato);
+                    formData.append("Número do Contrato", surveyData.numContrato);
+                    formData.append("Nome do Cliente", surveyData.cliente);
+                    formData.append("Nota", surveyData.nota);
+                    formData.append("Feedback", surveyData.feedback);
+                    formData.append("Email do Responsável", user.email);
+                    formData.append("Nome do Responsável", user.nome);
 
-            const tableData = useMemo(() => {
-                return filteredData.filter(r => {
-                    const matchMes = tableFilters.mes === 'Todos' || r.mes === tableFilters.mes;
-                    const matchUnid = tableFilters.unidade === 'Todas' || r.unidade === tableFilters.unidade;
-                    const matchCli = tableFilters.cliente === 'Todos' || r.cliente === tableFilters.cliente;
-                    return matchMes && matchUnid && matchCli;
-                });
-            }, [filteredData, tableFilters]);
+                    await fetch(`${SCRIPT_URL}?action=survey&${new URLSearchParams(formData).toString()}`, { method: 'POST' });
+                    alert("Avaliação enviada com sucesso!");
+                    window.location.reload();
+                } catch (e) {
+                    alert("Erro ao enviar avaliação.");
+                }
+                setLoading(false);
+            };
+
+            const handleContractChange = (val) => {
+                const c = contractsList.find(x => x.exibicao === val);
+                if(c) {
+                    setSurveyData({...surveyData, contrato: val, numContrato: c.numero, cliente: c.cliente});
+                } else {
+                    setSurveyData({...surveyData, contrato: val, numContrato: '', cliente: ''});
+                }
+            };
+
+            const handleExport = (type) => {
+                setExportMenuOpen(false);
+                let dataToExport = type === 'all' ? data : stats.filtered;
+                if (dataToExport.length === 0) return alert("Sem dados para exportar.");
+                
+                const csvRows = [
+                    ["Mes", "Unidade", "Cliente", "Contrato", "Nota", "Feedback"],
+                    ...dataToExport.map(r => [r.mes, r.unidade, r.cliente, r.contrato, r.nota, `"${r.feedback || ''}"`])
+                ];
+                const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+                const link = document.createElement("a");
+                link.setAttribute("href", encodeURI(csvContent));
+                link.setAttribute("download", `Export_NPS_Makro.csv`);
+                link.click();
+            };
 
             const stats = useMemo(() => {
-                const total = filteredData.length;
-                if (total === 0) return { nps: 0, total: 0 };
-                const p = filteredData.filter(x => x.nota >= 9).length;
-                const d = filteredData.filter(x => x.nota <= 6).length;
-                return { nps: Math.round(((p - d) / total) * 100), total };
-            }, [filteredData]);
+                const filtered = data.filter(d => {
+                    return (filters.mes === 'Todos' || d.mes === filters.mes) &&
+                           (filters.unidade === 'Todas' || d.unidade === filters.unidade) &&
+                           (filters.cliente === 'Todos' || d.cliente === filters.cliente) &&
+                           (filters.contrato === 'Todos' || d.contrato === filters.contrato);
+                });
+                const total = filtered.length;
+                const p = filtered.filter(x => x.nota >= 9).length;
+                const det = filtered.filter(x => x.nota <= 6).length;
+                const nps = total > 0 ? Math.round(((p - det) / total) * 100) : 0;
+                return { total, p, det, nps, neutros: total - p - det, filtered };
+            }, [data, filters]);
 
             const monthlyNpsData = useMemo(() => {
-                const uniqueMonths = [...new Set(responses.map(r => r.mes))].sort();
+                const uniqueMonths = [...new Set(data.map(r => r.mes))].sort();
                 return uniqueMonths.map(m => {
-                    const dMes = responses.filter(x => x.mes === m); 
+                    const dMes = data.filter(x => x.mes === m); 
                     const p = dMes.filter(x => x.nota >= 9).length;
                     const det = dMes.filter(x => x.nota <= 6).length;
                     const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
                     return { mes: m, score: nps };
                 });
-            }, [responses]);
+            }, [data]);
 
-            const RADIAN = Math.PI / 180;
-            const renderNeedle = (value, cx, cy, iR, oR) => {
-                const clampedValue = Math.max(-100, Math.min(100, value));
-                const ang = 180 - ((clampedValue + 100) / 200) * 180; 
-                const length = (iR + oR) / 2.2;
-                const sin = Math.sin(-RADIAN * ang);
-                const cos = Math.cos(-RADIAN * ang);
-                const r = 6;
-                const x0 = cx;
-                const y0 = cy;
-                const xba = x0 + r * sin;
-                const yba = y0 - r * cos;
-                const xbb = x0 - r * sin;
-                const ybb = y0 + r * cos;
-                const xp = x0 + length * cos;
-                const yp = y0 + length * sin;
+            useEffect(() => {
+                if (view === 'tv') {
+                    const interval = setInterval(() => setTvSlide(s => (s === 0 ? 1 : 0)), 15000);
+                    return () => clearInterval(interval);
+                }
+            }, [view]);
+
+            if (view === 'tv') {
+                const isClientSlide = tvSlide === 0;
                 return (
-                    <g key="needle">
-                        <circle cx={x0} cy={y0} r={r} fill="#fff" stroke="none" />
-                        <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill="#fff" stroke="none" />
-                    </g>
+                    <div className="h-screen w-screen tv-mode-bg flex animate-fadeIn overflow-hidden">
+                        <div className="tv-sidebar">
+                            <div className="tv-sidebar-accent"></div>
+                            <div className="space-y-4">
+                                <p className="text-gray-400 font-bold text-xs uppercase tracking-[4px] mb-2">NPS</p>
+                                <h1 className="text-[#023F88] text-5xl font-black leading-[0.95] uppercase">
+                                    NOTA NPS<br/>DE <span className="text-[#011f42]">{filters.mes === 'Todos' ? 'JANEIRO/26' : filters.mes}</span>
+                                    <br/>POR <span className="text-[#011f42]">{isClientSlide ? 'CLIENTE' : 'UNIDADE'}</span>
+                                </h1>
+                                <p className="text-gray-300 text-[10px] font-bold mt-10">ATUALIZADO {new Date().toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                        <div className="tv-main-content">
+                            <div className="absolute top-10 right-14 text-right opacity-30 text-[10px] font-black tracking-[3px] text-gray-500 uppercase leading-tight">Engenharia<br/>de Movimentação</div>
+                            <div className="flex justify-center gap-12 mt-4">
+                                <Gauge label="Índice NPS" value={stats.nps} color={getNPSColor(stats.nps)} />
+                                <Gauge label="Taxa de Resposta" sublabel="%" value={83} color={COLORS.excelencia} />
+                            </div>
+                            <div className="tv-table-container">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b-2 border-gray-400/20 text-gray-500 text-[11px] font-black uppercase tracking-wider">
+                                            <th className="pb-4 text-left">{isClientSlide ? 'CLIENTE' : 'UNIDADE'}</th>
+                                            <th className="pb-4 text-right">SCORE NPS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-gray-700">
+                                        {(isClientSlide ? [...new Set(data.map(d => d.cliente))] : [...new Set(data.map(d => d.unidade))])
+                                            .slice(0, 6).map((item, idx) => {
+                                                const dItem = data.filter(x => (isClientSlide ? x.cliente : x.unidade) === item);
+                                                const p = dItem.filter(x => x.nota >= 9).length;
+                                                const det = dItem.filter(x => x.nota <= 6).length;
+                                                const score = Math.round(((p - det) / dItem.length) * 100);
+                                                return (
+                                                    <tr key={idx} className="border-b border-gray-400/10 hover:bg-white/5 transition-all">
+                                                        <td className="py-4 font-bold uppercase text-lg">{item}</td>
+                                                        <td className="py-4 text-right font-black text-xl" style={{ color: getNPSColor(score) }}>{score}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="flex justify-end mt-auto">
+                                <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" className="h-14 grayscale brightness-50 opacity-20" />
+                                <button onClick={() => setView('dashboard')} className="fixed bottom-4 left-4 opacity-0 hover:opacity-100 p-2 bg-black text-white text-[10px] rounded">Sair TV</button>
+                            </div>
+                        </div>
+                    </div>
                 );
-            };
-
-            const gaugeData = [
-                { name: 'Crítica', value: 100, fill: ZONA_COLORS.critica },       
-                { name: 'Aperfeiçoamento', value: 50, fill: ZONA_COLORS.aperfeicoamento }, 
-                { name: 'Qualidade', value: 25, fill: ZONA_COLORS.qualidade },     
-                { name: 'Excelência', value: 25, fill: ZONA_COLORS.excelencia }     
-            ];
-
-            const handleExport = (type) => {
-                setExportMenuOpen(false);
-                let dataToExport = type === 'all' ? responses : filteredData;
-                const csvRows = [
-                    ["Data", "Mes", "Unidade", "Cliente", "Contrato", "Nota", "Feedback"],
-                    ...dataToExport.map(r => [r.data, r.mes, r.unidade, r.cliente, r.contrato, r.nota, r.feedback])
-                ];
-                const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
-                const link = document.createElement("a");
-                link.setAttribute("href", encodeURI(csvContent));
-                link.setAttribute("download", `Export_NPS_Makro_Engenharia.csv`);
-                link.click();
-            };
-
-            const startEdit = (u) => {
-                setEditingLogin(u.login);
-                setNewUser({ nome: u.nome, email: u.login, tipo: u.tipo, permissoes: u.permissoes || "" });
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
+            }
 
             return (
-                <div className="min-h-screen">
-                    <header className="p-6 flex flex-col items-center border-b border-white/10 bg-black/40 sticky top-0 z-50 backdrop-blur-md">
-                        <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" alt="Makro Engenharia" className="h-10 mb-2" />
-                        <div className="text-[10px] tracking-[4px] opacity-60 font-bold uppercase">Painel NPS | Makro Engenharia</div>
+                <div className="min-h-screen flex flex-col">
+                    <header className="p-6 flex flex-col items-center bg-black/40 border-b border-white/5 backdrop-blur-md sticky top-0 z-50">
+                        <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" className="h-10 mb-2" />
+                        <span className="text-[10px] tracking-[5px] font-bold opacity-40 uppercase">Painel NPS | Makro Engenharia</span>
                     </header>
 
-                    <main className="max-w-6xl mx-auto p-4 md:p-8 pb-20">
-                        {loading && <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center backdrop-blur-sm"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-red-600"></div></div>}
+                    <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+                        {loading && <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center backdrop-blur-sm"><div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div></div>}
 
                         {view === 'login' && (
-                            <div className="flex flex-col items-center mt-20 animate-fadeIn">
-                                <form onSubmit={handleLogin} className="w-full max-w-sm p-10 rounded-3xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl">
-                                    <h2 className="text-2xl font-bold text-center mb-8 uppercase tracking-tighter">Login Makro</h2>
-                                    <div className="space-y-4">
-                                        <input className="w-full bg-white/10 p-4 rounded-xl outline-none focus:ring-2 ring-red-500 transition-all text-white" placeholder="E-mail ou Usuário" required onChange={e => setLoginData({...loginData, identifier: e.target.value})} />
-                                        <input type="password" className="w-full bg-white/10 p-4 rounded-xl outline-none focus:ring-2 ring-red-500 transition-all text-white" placeholder="Senha" required onChange={e => setLoginData({...loginData, password: e.target.value})} />
-                                        <button className="w-full bg-red-600 p-4 rounded-xl font-bold uppercase hover:bg-red-700 transition shadow-lg shadow-red-600/20 active:scale-95">Entrar no Painel</button>
-                                    </div>
+                            <div className="flex flex-col items-center justify-center mt-20 animate-slide">
+                                <form onSubmit={handleLogin} className="w-full max-w-md bg-white/5 p-12 rounded-[40px] border border-white/10 shadow-2xl">
+                                    <h2 className="text-3xl font-black mb-8 text-center tracking-tighter uppercase">Login</h2>
+                                    <input className="w-full bg-white/10 p-4 rounded-2xl mb-4 outline-none border border-white/10 focus:ring-2 ring-red-600 transition-all text-white" placeholder="E-mail corporativo" id="li" required />
+                                    <input className="w-full bg-white/10 p-4 rounded-2xl mb-8 outline-none border border-white/10 focus:ring-2 ring-red-600 transition-all text-white" type="password" placeholder="Senha" id="lp" required />
+                                    <button type="submit" className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase hover:bg-red-700 shadow-xl shadow-red-600/20 active:scale-95 transition-all">Entrar</button>
                                 </form>
                             </div>
                         )}
 
                         {view === 'dashboard' && (
-                            <div className="space-y-6 animate-fadeIn">
-                                <div className="flex justify-between items-center mb-8">
-                                    <div className="flex items-center gap-4">
-                                        <Icon name="ShieldCheck" size={32} className="text-red-600" />
-                                        <div>
-                                            <h3 className="text-xs font-bold opacity-50 uppercase tracking-widest">{userProfile?.tipo}</h3>
-                                            <p className="font-bold text-xl tracking-tight">{userProfile?.nome}</p>
-                                        </div>
+                            <div className="space-y-8 animate-slide">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <h2 className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{user?.tipo}</h2>
+                                        <p className="text-2xl font-black tracking-tight">{user?.nome}</p>
                                     </div>
                                     <div className="flex gap-2">
-                                        {userProfile?.tipo === 'ADM MASTER' && <button onClick={() => setView('users')} className="p-2.5 bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 transition" title="Usuários"><Icon name="UserPlus" /></button>}
+                                        {(user?.tipo === 'Usuario' || user?.tipo === 'ADM MASTER') && (
+                                            <button onClick={() => setView('survey')} className="p-3 bg-red-600/10 text-red-500 border border-red-600/20 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-red-600/20 transition-all" title="Nova Avaliação">
+                                                <Icon name="PlusCircle" size={18} /> <span className="hidden md:inline">Avaliar</span>
+                                            </button>
+                                        )}
+                                        {user?.tipo === 'ADM MASTER' && (
+                                            <>
+                                                <button onClick={() => setView('tv')} className="p-3 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-yellow-500/20 transition-all" title="Modo Apresentação">
+                                                    <Icon name="Tv" size={18} />
+                                                </button>
+                                                <button onClick={() => setView('users')} className="p-3 bg-blue-600/10 text-blue-500 border border-blue-500/20 rounded-2xl font-bold text-xs uppercase hover:bg-blue-600/20 transition-all" title="Gerir Usuários">
+                                                    <Icon name="Users" size={18} />
+                                                </button>
+                                            </>
+                                        )}
                                         <div className="relative">
-                                            <button onClick={() => setExportMenuOpen(!exportMenuOpen)} className="p-2.5 bg-green-600 rounded-xl shadow-lg hover:bg-green-700 transition" title="Exportar"><Icon name="FileSpreadsheet" /></button>
+                                            <button onClick={() => setExportMenuOpen(!exportMenuOpen)} className="p-3 bg-green-600/10 text-green-500 border border-green-600/20 rounded-2xl font-bold text-xs hover:bg-green-600/20 transition-all" title="Exportar">
+                                                <Icon name="FileSpreadsheet" size={18} />
+                                            </button>
                                             {exportMenuOpen && (
-                                                <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#010816] border border-white/10 shadow-2xl z-[60] overflow-hidden">
+                                                <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#010816] border border-white/10 shadow-2xl z-50 overflow-hidden">
                                                     <button onClick={() => handleExport('filtered')} className="w-full text-left p-4 text-[10px] font-bold uppercase hover:bg-white/5 transition flex items-center gap-2 border-b border-white/5"><Icon name="Filter" size={14} className="text-green-500"/> Exportar Filtrado</button>
                                                     <button onClick={() => handleExport('all')} className="w-full text-left p-4 text-[10px] font-bold uppercase hover:bg-white/5 transition flex items-center gap-2"><Icon name="Download" size={14} className="text-blue-500"/> Exportar Tudo</button>
                                                 </div>
                                             )}
                                         </div>
-                                        <button onClick={() => setView('password')} className="p-2.5 bg-white/10 rounded-xl hover:bg-white/20 transition" title="Alterar Senha"><Icon name="Key" /></button>
-                                        <button onClick={() => window.location.reload()} className="p-2.5 bg-white/5 rounded-xl hover:bg-red-600/20 transition" title="Sair"><Icon name="LogOut" /></button>
+                                        <button onClick={() => window.location.reload()} className="p-3 bg-white/5 rounded-2xl border border-white/10 hover:bg-red-600/10 hover:border-red-600/30 transition-all group">
+                                            <Icon name="LogOut" className="group-hover:text-red-500" />
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                                    {['mes', 'unidade', 'cliente', 'contrato'].map(f => (
-                                        <div key={f}>
-                                            <label className="text-[9px] uppercase font-bold opacity-40 mb-1 block tracking-widest">{f}</label>
-                                            <select className="w-full bg-white/5 p-2 rounded-lg text-xs outline-none border border-white/10 text-white" value={filters[f]} onChange={(e) => setFilters({...filters, [f]: e.target.value})}>
-                                                <option value={f === 'unidade' ? 'Todas' : 'Todos'}>Todos</option>
-                                                {[...new Set(responses.map(r => r[f]))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
-                                            </select>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white/5 p-6 rounded-[30px] border border-white/10">
+                                    {/* Filtro Mês */}
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Mês</label>
+                                        <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.mes} onChange={e => setFilters({...filters, mes: e.target.value})}>
+                                            <option value="Todos">Todos</option>
+                                            {[...new Set(data.map(d => d.mes))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                        </select>
+                                    </div>
+                                    {/* Filtro Unidade */}
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Unidade</label>
+                                        <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.unidade} onChange={e => setFilters({...filters, unidade: e.target.value})}>
+                                            <option value="Todas">Todas</option>
+                                            {[...new Set(data.map(d => d.unidade))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                        </select>
+                                    </div>
+                                    {/* Filtro Cliente */}
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Cliente</label>
+                                        <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.cliente} onChange={e => setFilters({...filters, cliente: e.target.value})}>
+                                            <option value="Todos">Todos</option>
+                                            {[...new Set(data.map(d => d.cliente))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                        </select>
+                                    </div>
+                                    {/* Filtro Contrato (Apenas Nome) */}
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Contrato</label>
+                                        <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.contrato} onChange={e => setFilters({...filters, contrato: e.target.value})}>
+                                            <option value="Todos">Todos</option>
+                                            {[...new Set(data.map(d => d.contrato))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    {[
+                                        { l: 'Total Respostas', v: stats.total, c: 'white' },
+                                        { l: 'Promotores', v: stats.p, c: COLORS.excelencia },
+                                        { l: 'Neutros', v: stats.neutros, c: COLORS.aperfeicoamento },
+                                        { l: 'Detratores', v: stats.det, c: COLORS.critica },
+                                        { l: 'NPS Score', v: stats.nps, c: getNPSColor(stats.nps), highlight: true }
+                                    ].map((s, i) => (
+                                        <div key={i} className={`p-6 rounded-3xl border ${s.highlight ? 'bg-white/10 border-white/30' : 'bg-white/5 border-white/10'} text-center`}>
+                                            <span className="text-[10px] font-bold opacity-40 uppercase block mb-1">{s.l}</span>
+                                            <span className="text-3xl font-black" style={{ color: s.c }}>{s.v}</span>
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div className="lg:col-span-2 p-8 rounded-3xl bg-white/5 border border-white/10 min-h-[420px]">
-                                        <div className="flex justify-between items-center mb-8">
-                                            <h4 className="font-bold text-xs uppercase opacity-60 flex items-center gap-2"><Icon name="TrendingUp" size={16}/> Histórico NPS</h4>
-                                            <div className="hidden md:flex gap-4">
-                                                {gaugeData.map(z => (
-                                                    <div key={z.name} className="flex items-center gap-1.5 text-[8px] font-bold uppercase" style={{ color: z.fill }}>
-                                                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: z.fill }} /> {z.name}
-                                                    </div>
+                                <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 h-[400px]">
+                                    <div className="mb-4 flex justify-between items-center">
+                                        <h4 className="text-xs font-bold uppercase opacity-40">Índice NPS Mensal (Régua Makro)</h4>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height="90%">
+                                        <BarChart data={monthlyNpsData}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                                            <XAxis dataKey="mes" stroke="#ffffff30" fontSize={10} />
+                                            <YAxis stroke="#ffffff30" fontSize={10} domain={[-100, 100]} ticks={[-100, -50, 0, 50, 75, 100]} />
+                                            <Tooltip 
+                                                cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                                                contentStyle={{ background: '#010816', border: '1px solid #ffffff20', borderRadius: '15px', color: '#fff' }} 
+                                            />
+                                            <ReferenceLine y={0} stroke="#ffffff30" />
+                                            <Bar dataKey="score" radius={[8, 8, 0, 0]}>
+                                                {monthlyNpsData.map((entry, index) => (
+                                                    <Cell key={index} fill={getNPSColor(entry.score)} />
                                                 ))}
-                                            </div>
-                                        </div>
-                                        <div className="h-[300px]">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={monthlyNpsData}>
-                                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.05} vertical={false}/>
-                                                    <XAxis dataKey="mes" stroke="#ffffff22" fontSize={10}/>
-                                                    <YAxis stroke="#ffffff22" domain={[-100, 100]} fontSize={10}/>
-                                                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.03)'}} contentStyle={{backgroundColor: '#010816', border: '1px solid #ffffff11', borderRadius: '12px', fontSize: '10px', color: '#fff'}}/>
-                                                    <Bar dataKey="score" radius={[6, 6, 0, 0]}>
-                                                        {monthlyNpsData.map((e, i) => <Cell key={i} fill={getStatusColor(e.score)} />)}
-                                                    </Bar>
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center relative overflow-hidden">
-                                        <h4 className="font-bold text-xs uppercase opacity-60 flex items-center gap-2 mb-6"><Icon name="Gauge" size={16}/> NPS Atual</h4>
-                                        <div className="text-center mb-4 animate-fadeIn">
-                                            <h2 className="text-7xl font-black tracking-tighter" style={{ color: getStatusColor(stats.nps) }}>{stats.nps}</h2>
-                                            <p className="text-[12px] font-bold uppercase opacity-80 mt-1 tracking-widest" style={{ color: getStatusColor(stats.nps) }}>{getStatusLabel(stats.nps)}</p>
-                                        </div>
-                                        <div className="w-full h-[220px] flex items-center justify-center">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie data={gaugeData} cx="50%" cy="80%" startAngle={180} endAngle={0} innerRadius="65%" outerRadius="95%" paddingAngle={0} dataKey="value" stroke="none">
-                                                        {gaugeData.map((e, i) => <Cell key={i} fill={e.fill} />)}
-                                                    </Pie>
-                                                    {renderNeedle(stats.nps, 137, 176, 90, 130)}
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                        <div className="w-full flex justify-between px-10 text-[9px] font-bold opacity-30 mt-[-20px] uppercase tracking-widest">
-                                            <span>-100</span><span>0</span><span>50</span><span>75</span><span>100</span>
-                                        </div>
-                                    </div>
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
                                 </div>
 
-                                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 overflow-hidden">
-                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                                        <h4 className="font-bold text-xs uppercase opacity-60 flex items-center gap-2"><Icon name="MessageSquare" size={16}/> Voz do Cliente</h4>
-                                        <div className="flex flex-wrap gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
-                                            <div className="flex items-center gap-2 pr-3 border-r border-white/10">
-                                                <span className="text-[9px] uppercase font-black opacity-40">Mês:</span>
-                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white" value={tableFilters.mes} onChange={e => setTableFilters({...tableFilters, mes: e.target.value})}>
-                                                    <option value="Todos" className="bg-slate-900">Todos</option>
-                                                    {[...new Set(responses.map(r => r.mes))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="flex items-center gap-2 pr-3 border-r border-white/10">
-                                                <span className="text-[9px] uppercase font-black opacity-40">Unid:</span>
-                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white" value={tableFilters.unidade} onChange={e => setTableFilters({...tableFilters, unidade: e.target.value})}>
-                                                    <option value="Todas" className="bg-slate-900">Todas</option>
-                                                    {[...new Set(responses.map(r => r.unidade))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[9px] uppercase font-black opacity-40">Cli:</span>
-                                                <select className="bg-transparent text-[11px] font-bold outline-none cursor-pointer text-white" value={tableFilters.cliente} onChange={e => setTableFilters({...tableFilters, cliente: e.target.value})}>
-                                                    <option value="Todos" className="bg-slate-900">Todos</option>
-                                                    {[...new Set(responses.map(r => r.cliente))].filter(Boolean).sort().map(val => <option key={val} value={val} className="bg-slate-900">{val}</option>)}
-                                                </select>
-                                            </div>
-                                        </div>
+                                <div className="bg-white/5 border border-white/10 rounded-[40px] overflow-hidden">
+                                    <div className="p-6 border-b border-white/5">
+                                        <h4 className="text-xs font-bold uppercase opacity-40">Respostas Recentes</h4>
                                     </div>
-                                    <div className="overflow-x-auto custom-scrollbar">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-white/5 text-[10px] font-bold uppercase text-red-500 tracking-widest">
-                                                <tr>
-                                                    <th className="p-4 rounded-l-xl">Data</th>
-                                                    <th className="p-4">Contrato</th>
-                                                    <th className="p-4">Cliente</th>
-                                                    <th className="p-4 text-center">Nota</th>
-                                                    <th className="p-4 rounded-r-xl">Comentário / Feedback</th>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead>
+                                                <tr className="bg-white/5 text-red-500 font-bold uppercase tracking-widest">
+                                                    <th className="p-5">Mês</th>
+                                                    <th className="p-5">Contrato</th>
+                                                    <th className="p-5">Cliente</th>
+                                                    <th className="p-5 text-center">Nota</th>
+                                                    <th className="p-5">Comentário</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-white/5">
-                                                {tableData.length === 0 ? (
-                                                    <tr><td colSpan="5" className="p-20 text-center opacity-20 uppercase font-bold text-xs text-white">Nenhum registro selecionado</td></tr>
-                                                ) : (
-                                                    tableData.map((r, i) => (
-                                                        <tr key={i} className="group text-white">
-                                                            <td className="p-4 text-[10px] opacity-50 whitespace-nowrap">{r.data ? new Date(r.data).toLocaleDateString() : '--'}</td>
-                                                            <td className="p-4 text-[11px] font-bold text-blue-400">{r.contrato}</td>
-                                                            <td className="p-4 text-[11px] uppercase truncate max-w-[150px]">{r.cliente}</td>
-                                                            <td className="p-4 text-center">
-                                                                <span className="inline-block px-3 py-1 rounded-lg text-[11px] font-black" style={{ backgroundColor: `${getStatusColor(r.nota*10-25)}22`, color: getStatusColor(r.nota*10-25) }}>{r.nota}</span>
-                                                            </td>
-                                                            <td className="p-4 text-[11px] italic opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed max-w-[300px]">"{r.feedback || 'Sem comentário'}"</td>
-                                                        </tr>
-                                                    ))
-                                                )}
+                                                {stats.filtered.slice().reverse().map((r, i) => (
+                                                    <tr key={i} className="hover:bg-white/5 transition-all text-white">
+                                                        <td className="p-5 opacity-40">{r.mes}</td>
+                                                        <td className="p-5 font-bold text-blue-400">{r.numContrato} - {r.contrato}</td>
+                                                        <td className="p-5 uppercase">{r.cliente}</td>
+                                                        <td className="p-5 text-center">
+                                                            <span className="px-3 py-1 rounded-lg font-black" style={{ background: r.nota >= 9 ? `${COLORS.excelencia}20` : r.nota <= 6 ? `${COLORS.critica}20` : `${COLORS.aperfeicoamento}20`, color: r.nota >= 9 ? COLORS.excelencia : r.nota <= 6 ? COLORS.critica : COLORS.aperfeicoamento }}>{r.nota}</span>
+                                                        </td>
+                                                        <td className="p-5 opacity-60 italic leading-relaxed">"{r.feedback || '-'}"</td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
@@ -405,20 +460,65 @@
                             </div>
                         )}
 
-                        {view === 'users' && (
-                            <div className="space-y-6 animate-fadeIn">
+                        {view === 'survey' && (
+                            <div className="max-w-2xl mx-auto space-y-6 animate-slide">
                                 <div className="flex justify-between items-center mb-8">
-                                    <h2 className="text-2xl font-bold uppercase flex items-center gap-3"><Icon name="UserPlus" className="text-blue-500" /> Gestão de Usuários</h2>
-                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition text-white">Voltar ao Painel</button>
+                                    <h2 className="text-2xl font-black uppercase flex items-center gap-3"><Icon name="PlusCircle" className="text-red-500" /> Nova Avaliação</h2>
+                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition text-white">Cancelar</button>
+                                </div>
+                                <form onSubmit={handleSurveySubmit} className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6">
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Mês de Referência</label>
+                                        <select className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white" value={surveyData.mesReferente} onChange={e => setSurveyData({...surveyData, mesReferente: e.target.value})}>
+                                            <option value="Jan 26">Jan 26</option>
+                                            <option value="Fev 26">Fev 26</option>
+                                            <option value="Mar 26">Mar 26</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Contrato</label>
+                                        <select className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white" required value={surveyData.contrato} onChange={e => handleContractChange(e.target.value)}>
+                                            <option value="">Selecione...</option>
+                                            {contractsList.map(c => <option key={c.numero} value={c.exibicao}>{c.exibicao}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Número do Contrato</label>
+                                        <input className="w-full bg-white/10 p-4 rounded-xl text-sm text-white opacity-50 cursor-not-allowed" readOnly value={surveyData.numContrato} />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Sua Nota (0 a 10)</label>
+                                        <div className="flex justify-between gap-2">
+                                            {[...Array(11).keys()].map(n => (
+                                                <button key={n} type="button" onClick={() => setSurveyData({...surveyData, nota: n})} className={`flex-1 h-12 rounded-lg font-bold transition-all border ${surveyData.nota === n ? 'border-red-600 bg-red-600/20 text-red-500' : 'border-white/10 bg-white/5 hover:border-white/30 text-white'}`}>
+                                                    {n}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Feedback</label>
+                                        <textarea className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white h-32 outline-none focus:ring-2 ring-red-600 transition-all" placeholder="Sua opinião..." value={surveyData.feedback} onChange={e => setSurveyData({...surveyData, feedback: e.target.value})}></textarea>
+                                    </div>
+                                    <button type="submit" className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase hover:bg-red-700 shadow-xl shadow-red-600/20 active:scale-95 transition-all">Enviar Avaliação</button>
+                                </form>
+                            </div>
+                        )}
+
+                        {view === 'users' && (
+                            <div className="space-y-6 animate-slide">
+                                <div className="flex justify-between items-center mb-8">
+                                    <h2 className="text-2xl font-black uppercase flex items-center gap-3"><Icon name="Users" className="text-blue-500" /> Gestão de Usuários</h2>
+                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition text-white">Voltar</button>
                                 </div>
                                 <div className={`p-8 rounded-3xl bg-white/5 border border-white/10 ${editingLogin ? 'border-blue-500' : ''} transition-all`}>
                                     <h4 className="text-[10px] uppercase font-bold opacity-40 mb-6 tracking-widest text-white">{editingLogin ? `Editando: ${editingLogin}` : 'Novo Cadastro'}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        <input value={newUser.nome} className="bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 text-white" placeholder="Nome Completo" onChange={e => setNewUser({...newUser, nome: e.target.value})} />
+                                        <input value={newUser.nome} className="bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 text-white" placeholder="Nome" onChange={e => setNewUser({...newUser, nome: e.target.value})} />
                                         <input value={newUser.email} disabled={!!editingLogin} className={`bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 text-white ${editingLogin ? 'opacity-50' : ''}`} placeholder="Login" onChange={e => setNewUser({...newUser, email: e.target.value})} />
-                                        <select value={newUser.tipo} className="bg-white/10 p-4 rounded-xl outline-none text-sm text-white" onChange={e => setNewUser({...newUser, tipo: e.target.value})}>
-                                            <option value="Usuario" className="bg-slate-900">Usuário</option>
-                                            <option value="ADM MASTER" className="bg-slate-900">ADM Master</option>
+                                        <select value={newUser.tipo} className="bg-[#010816] p-4 rounded-xl outline-none text-sm text-white" onChange={e => setNewUser({...newUser, tipo: e.target.value})}>
+                                            <option value="Usuario">Usuário</option>
+                                            <option value="ADM MASTER">ADM Master</option>
                                         </select>
                                         <button onClick={() => manageUser('add')} className={`rounded-xl font-bold text-xs uppercase shadow-lg transition active:scale-95 text-white ${editingLogin ? 'bg-blue-600' : 'bg-green-600'}`}>
                                             {editingLogin ? 'Atualizar' : 'Salvar'}
@@ -433,14 +533,14 @@
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
                                             {usersList.map(u => (
-                                                <tr key={u.login} className={`text-white ${editingLogin === u.login ? 'bg-blue-500/10' : ''}`}>
-                                                    <td className="p-5 font-medium">{u.nome}</td>
+                                                <tr key={u.login} className="text-white hover:bg-white/5 transition-all">
+                                                    <td className="p-5 font-bold uppercase">{u.nome}</td>
                                                     <td className="p-5 opacity-60">{u.login}</td>
                                                     <td className="p-5"><span className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded text-[10px] font-bold">{u.tipo}</span></td>
                                                     <td className="p-5 text-center">
                                                         <div className="flex justify-center gap-4">
-                                                            <button onClick={() => startEdit(u)} className="text-blue-400 hover:text-white transition"><Icon name="Pencil" size={16}/></button>
-                                                            <button onClick={() => { if(confirm('Excluir usuário?')) manageUser('delete', u.login); }} className="text-red-500 hover:text-white transition"><Icon name="Trash2" size={16}/></button>
+                                                            <button onClick={() => { setEditingLogin(u.login); setNewUser({nome:u.nome, email:u.login, tipo:u.tipo, permissoes:u.permissoes || ""}); window.scrollTo(0,0); }} className="text-blue-400 hover:text-white transition"><Icon name="Pencil" size={16}/></button>
+                                                            <button onClick={() => { if(confirm('Excluir?')) manageUser('delete', u.login); }} className="text-red-500 hover:text-white transition"><Icon name="Trash2" size={16}/></button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -451,12 +551,14 @@
                             </div>
                         )}
                     </main>
-                    <footer className="fixed bottom-0 left-0 w-full p-6 text-center bg-[#010816]/80 backdrop-blur-sm opacity-30 text-[9px] uppercase font-bold tracking-[4px] pointer-events-none text-white">Marketing & Qualidade | Makro Engenharia © 2026</footer>
+
+                    <footer className="p-8 text-center opacity-20 text-[9px] font-black uppercase tracking-[5px] text-white">
+                        Marketing & Qualidade | Makro Engenharia
+                    </footer>
                 </div>
             );
         };
 
-        // Renderização Inicial
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS - Makro Engenharia v03</title>
+    <title>Painel NPS - Makro Engenharia v07</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -53,6 +53,37 @@
             if (score >= 50) return COLORS.qualidade;
             if (score >= 0) return COLORS.aperfeicoamento;
             return COLORS.critica;
+        };
+
+        // Função para ordenar meses cronologicamente
+        const sortMonthsChronologically = (months) => {
+            const monthOrder = {
+                'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6,
+                'Jul': 7, 'Ago': 8, 'Set': 9, 'Out': 10, 'Nov': 11, 'Dez': 12
+            };
+
+            return [...months].sort((a, b) => {
+                const [monthA, yearA] = a.split(' ');
+                const [monthB, yearB] = b.split(' ');
+
+                const fullYearA = parseInt(yearA) > 50 ? 1900 + parseInt(yearA) : 2000 + parseInt(yearA);
+                const fullYearB = parseInt(yearB) > 50 ? 1900 + parseInt(yearB) : 2000 + parseInt(yearB);
+
+                if (fullYearA !== fullYearB) return fullYearA - fullYearB;
+                return (monthOrder[monthA] || 0) - (monthOrder[monthB] || 0);
+            });
+        };
+
+        // Função para agrupar meses por ano
+        const groupMonthsByYear = (months) => {
+            const grouped = {};
+            months.forEach(month => {
+                const [, year] = month.split(' ');
+                const fullYear = parseInt(year) > 50 ? 1900 + parseInt(year) : 2000 + parseInt(year);
+                if (!grouped[fullYear]) grouped[fullYear] = [];
+                grouped[fullYear].push(month);
+            });
+            return grouped;
         };
 
         const Icon = ({ name, size = 18, className = "" }) => {
@@ -192,11 +223,10 @@
             const handleExport = (type) => {
                 setExportMenuOpen(false);
                 let dataToExport = type === 'all' ? data : stats.filtered;
-                if (dataToExport.length === 0) return alert("Sem dados para exportar.");
-                
+   
                 const csvRows = [
-                    ["Mes", "Unidade", "Cliente", "Contrato", "Nota", "Feedback"],
-                    ...dataToExport.map(r => [r.mes, r.unidade, r.cliente, r.contrato, r.nota, `"${r.feedback || ''}"`])
+                    ['Mês', 'Contrato', 'Número Contrato', 'Cliente', 'Unidade', 'Nota', 'Feedback', 'Data Resposta'],
+                    ...dataToExport.map(d => [d.mes, d.contrato, d.numContrato, d.cliente, d.unidade, d.nota, d.feedback, d.data])
                 ];
                 const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
                 const link = document.createElement("a");
@@ -207,7 +237,17 @@
 
             const stats = useMemo(() => {
                 const filtered = data.filter(d => {
-                    return (filters.mes === 'Todos' || d.mes === filters.mes) &&
+                    let matchMes = false;
+                    if (filters.mes === 'Todos') {
+                        matchMes = true;
+                    } else if (filters.mes.startsWith('Ano ')) {
+                        const targetYear = filters.mes.replace('Ano ', '');
+                        matchMes = d.mes && d.mes.endsWith(targetYear);
+                    } else {
+                        matchMes = d.mes === filters.mes;
+                    }
+
+                    return matchMes &&
                            (filters.unidade === 'Todas' || d.unidade === filters.unidade) &&
                            (filters.cliente === 'Todos' || d.cliente === filters.cliente) &&
                            (filters.contrato === 'Todos' || d.contrato === filters.contrato);
@@ -220,15 +260,27 @@
             }, [data, filters]);
 
             const monthlyNpsData = useMemo(() => {
-                const uniqueMonths = [...new Set(data.map(r => r.mes))].sort();
-                return uniqueMonths.map(m => {
+                // Filtra os meses que devem aparecer no gráfico com base no filtro de período
+                let monthsToShow = [...new Set(data.map(r => r.mes))].filter(Boolean);
+                
+                if (filters.mes !== 'Todos') {
+                    if (filters.mes.startsWith('Ano ')) {
+                        const targetYear = filters.mes.replace('Ano ', '');
+                        monthsToShow = monthsToShow.filter(m => m.endsWith(targetYear));
+                    } else {
+                        monthsToShow = monthsToShow.filter(m => m === filters.mes);
+                    }
+                }
+
+                const sortedMonths = sortMonthsChronologically(monthsToShow);
+                return sortedMonths.map(m => {
                     const dMes = data.filter(x => x.mes === m); 
                     const p = dMes.filter(x => x.nota >= 9).length;
                     const det = dMes.filter(x => x.nota <= 6).length;
                     const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
                     return { mes: m, score: nps };
                 });
-            }, [data]);
+            }, [data, filters.mes]);
 
             useEffect(() => {
                 if (view === 'tv') {
@@ -246,7 +298,7 @@
                             <div className="space-y-4">
                                 <p className="text-gray-400 font-bold text-xs uppercase tracking-[4px] mb-2">NPS</p>
                                 <h1 className="text-[#023F88] text-5xl font-black leading-[0.95] uppercase">
-                                    NOTA NPS<br/>DE <span className="text-[#011f42]">{filters.mes === 'Todos' ? 'JANEIRO/26' : filters.mes}</span>
+                                    NOTA NPS<br/>DE <span className="text-[#011f42]">{filters.mes === 'Todos' ? 'GERAL' : filters.mes}</span>
                                     <br/>POR <span className="text-[#011f42]">{isClientSlide ? 'CLIENTE' : 'UNIDADE'}</span>
                                 </h1>
                                 <p className="text-gray-300 text-[10px] font-bold mt-10">ATUALIZADO {new Date().toLocaleDateString()}</p>
@@ -354,12 +406,26 @@
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white/5 p-6 rounded-[30px] border border-white/10">
-                                    {/* Filtro Mês */}
+                                    {/* Filtro Mês com Hierarquia por Ano e Opção de Ano Inteiro */}
                                     <div>
                                         <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Mês</label>
                                         <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.mes} onChange={e => setFilters({...filters, mes: e.target.value})}>
-                                            <option value="Todos">Todos</option>
-                                            {[...new Set(data.map(d => d.mes))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            <option value="Todos">Todos os Períodos</option>
+                                            {(() => {
+                                                const uniqueMonths = [...new Set(data.map(d => d.mes))].filter(Boolean);
+                                                const sortedMonths = sortMonthsChronologically(uniqueMonths);
+                                                const groupedMonths = groupMonthsByYear(sortedMonths);
+                                                const years = Object.keys(groupedMonths).sort();
+                                                
+                                                return years.map(year => (
+                                                    <optgroup key={year} label={`--- ${year} ---`}>
+                                                        <option value={`Ano ${year.slice(-2)}`}>Todo o Ano {year}</option>
+                                                        {groupedMonths[year].map(month => (
+                                                            <option key={month} value={month}>{month}</option>
+                                                        ))}
+                                                    </optgroup>
+                                                ));
+                                            })()}
                                         </select>
                                     </div>
                                     {/* Filtro Unidade */}
@@ -447,10 +513,8 @@
                                                         <td className="p-5 opacity-40">{r.mes}</td>
                                                         <td className="p-5 font-bold text-blue-400">{r.numContrato} - {r.contrato}</td>
                                                         <td className="p-5 uppercase">{r.cliente}</td>
-                                                        <td className="p-5 text-center">
-                                                            <span className="px-3 py-1 rounded-lg font-black" style={{ background: r.nota >= 9 ? `${COLORS.excelencia}20` : r.nota <= 6 ? `${COLORS.critica}20` : `${COLORS.aperfeicoamento}20`, color: r.nota >= 9 ? COLORS.excelencia : r.nota <= 6 ? COLORS.critica : COLORS.aperfeicoamento }}>{r.nota}</span>
-                                                        </td>
-                                                        <td className="p-5 opacity-60 italic leading-relaxed">"{r.feedback || '-'}"</td>
+                                                        <td className="p-5 text-center"><span className="px-3 py-1 rounded-full text-[10px] font-bold" style={{ background: getNPSColor(r.nota) + '20', color: getNPSColor(r.nota) }}>{r.nota}</span></td>
+                                                        <td className="p-5 opacity-60 max-w-xs truncate">{r.feedback}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -461,45 +525,71 @@
                         )}
 
                         {view === 'survey' && (
-                            <div className="max-w-2xl mx-auto space-y-6 animate-slide">
-                                <div className="flex justify-between items-center mb-8">
-                                    <h2 className="text-2xl font-black uppercase flex items-center gap-3"><Icon name="PlusCircle" className="text-red-500" /> Nova Avaliação</h2>
-                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition text-white">Cancelar</button>
-                                </div>
-                                <form onSubmit={handleSurveySubmit} className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6">
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Mês de Referência</label>
-                                        <select className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white" value={surveyData.mesReferente} onChange={e => setSurveyData({...surveyData, mesReferente: e.target.value})}>
-                                            <option value="Jan 26">Jan 26</option>
-                                            <option value="Fev 26">Fev 26</option>
-                                            <option value="Mar 26">Mar 26</option>
-                                        </select>
+                            <div className="flex flex-col items-center justify-center mt-10 animate-slide">
+                                <form onSubmit={handleSurveySubmit} className="w-full max-w-2xl bg-white/5 p-12 rounded-[40px] border border-white/10 shadow-2xl space-y-6">
+                                    <div className="flex justify-between items-center mb-8">
+                                        <h2 className="text-2xl font-black uppercase">Nova Avaliação NPS</h2>
+                                        <button type="button" onClick={() => setView('dashboard')} className="text-xs font-bold opacity-40 hover:opacity-100 transition">Voltar</button>
                                     </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Contrato</label>
-                                        <select className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white" required value={surveyData.contrato} onChange={e => handleContractChange(e.target.value)}>
-                                            <option value="">Selecione...</option>
-                                            {contractsList.map(c => <option key={c.numero} value={c.exibicao}>{c.exibicao}</option>)}
-                                        </select>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Mês Referente</label>
+                                            <select value={surveyData.mesReferente} className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" onChange={e => setSurveyData({...surveyData, mesReferente: e.target.value})}>
+                                                {(() => {
+                                                    const uniqueMonths = [...new Set(data.map(d => d.mes))].filter(Boolean);
+                                                    const sortedMonths = sortMonthsChronologically(uniqueMonths);
+                                                    const groupedMonths = groupMonthsByYear(sortedMonths);
+                                                    const years = Object.keys(groupedMonths).sort();
+                                                    
+                                                    return years.map(year => (
+                                                        <optgroup key={year} label={year}>
+                                                            {groupedMonths[year].map(month => (
+                                                                <option key={month} value={month}>{month}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    ));
+                                                })()}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Contrato</label>
+                                            <select value={surveyData.contrato} className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" onChange={e => handleContractChange(e.target.value)}>
+                                                <option value="">Selecione...</option>
+                                                {contractsList.map(c => <option key={c.exibicao} value={c.exibicao}>{c.exibicao}</option>)}
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Número do Contrato</label>
-                                        <input className="w-full bg-white/10 p-4 rounded-xl text-sm text-white opacity-50 cursor-not-allowed" readOnly value={surveyData.numContrato} />
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Número do Contrato</label>
+                                            <input disabled value={surveyData.numContrato} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none text-xs text-white opacity-50" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Cliente</label>
+                                            <input disabled value={surveyData.cliente} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none text-xs text-white opacity-50" />
+                                        </div>
                                     </div>
+
                                     <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Sua Nota (0 a 10)</label>
-                                        <div className="flex justify-between gap-2">
-                                            {[...Array(11).keys()].map(n => (
-                                                <button key={n} type="button" onClick={() => setSurveyData({...surveyData, nota: n})} className={`flex-1 h-12 rounded-lg font-bold transition-all border ${surveyData.nota === n ? 'border-red-600 bg-red-600/20 text-red-500' : 'border-white/10 bg-white/5 hover:border-white/30 text-white'}`}>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-4">Nota NPS (0-10)</label>
+                                        <div className="grid grid-cols-11 gap-2">
+                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                                <button key={n} type="button" onClick={() => setSurveyData({...surveyData, nota: n})} 
+                                                    className={`p-3 rounded-lg font-bold text-sm transition-all ${surveyData.nota === n ? 'ring-2 ring-red-600 scale-110' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}
+                                                    style={surveyData.nota === n ? { background: getNPSColor(n) + '30' } : {}}>
                                                     {n}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
+
                                     <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Feedback</label>
-                                        <textarea className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white h-32 outline-none focus:ring-2 ring-red-600 transition-all" placeholder="Sua opinião..." value={surveyData.feedback} onChange={e => setSurveyData({...surveyData, feedback: e.target.value})}></textarea>
+                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Feedback (Opcional)</label>
+                                        <textarea value={surveyData.feedback} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none text-xs text-white focus:ring-2 ring-red-600 resize-none h-24" placeholder="Deixe seu comentário..." onChange={e => setSurveyData({...surveyData, feedback: e.target.value})} />
                                     </div>
+
                                     <button type="submit" className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase hover:bg-red-700 shadow-xl shadow-red-600/20 active:scale-95 transition-all">Enviar Avaliação</button>
                                 </form>
                             </div>

@@ -498,8 +498,8 @@
                                     <ResponsiveContainer width="100%" height="85%">
                                         <BarChart data={monthlyNpsData} onClick={(e) => e && e.activePayload && handleBarClick(e.activePayload[0].payload)}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                                            <XAxis dataKey="mes" stroke="#ffffff" fontSize={10} />
-                                            <YAxis stroke="#ffffff" fontSize={10} domain={[-100, 100]} ticks={[-100, -50, 0, 50, 75, 100]} />
+                                            <XAxis dataKey="mes" stroke="#cccccc" fontSize={10} />
+                                            <YAxis stroke="#cccccc" fontSize={10} domain={[-100, 100]} ticks={[-100, -50, 0, 50, 75, 100]} />
                                             <Tooltip 
                                                 cursor={{fill: 'rgba(255,255,255,0.05)', cursor: 'pointer'}}
                                                 contentStyle={{ background: '#010816', border: '1px solid #ffffff20', borderRadius: '15px', color: '#fff' }} 
@@ -515,7 +515,7 @@
                                                         strokeWidth={2}
                                                     />
                                                 ))}
-                                                <LabelList dataKey="score" position="top" fill="#ffffff" fontSize={10} fontWeight="bold" />
+                                                <LabelList dataKey="score" position="top" fill="#cccccc" fontSize={10} fontWeight="bold" />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>

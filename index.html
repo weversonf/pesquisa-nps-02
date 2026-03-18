@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS - Makro Engenharia v04</title>
+    <title>Painel NPS - Makro Engenharia v05</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -15,19 +15,17 @@
     <style>
         body { font-family: 'Montserrat', sans-serif; background-color: #010816; color: #f1f5f9; margin: 0; }
         .tv-mode-bg { background-color: #e9eef3 !important; color: #333 !important; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ED1C24; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-        .animate-slide { animation: slideIn 0.3s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.2s ease-out forwards; }
         
         .tv-sidebar { width: 450px; background: white; height: 100vh; position: relative; padding: 4rem; display: flex; flex-direction: column; justify-content: center; box-shadow: 10px 0 30px rgba(0,0,0,0.05); z-index: 10; }
         .tv-sidebar-accent { position: absolute; left: 0; top: 0; width: 40px; height: 100%; background: #011f42; }
         .tv-main-content { flex: 1; padding: 3rem; background: #e9eef3; display: flex; flex-direction: column; gap: 2rem; position: relative; }
         .tv-table-container { background: #d1d9e0; border-radius: 40px; padding: 2.5rem; flex: 1; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05); }
-
-        .nps-card-active { border: 2px solid #ED1C24 !important; background: rgba(237, 28, 36, 0.1) !important; }
     </style>
 </head>
 <body>
@@ -39,13 +37,11 @@
 
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcsfpw1_uglhD6JtF4jAvjJ4hqgnHTcgKL8CBtb_i6pRmck7POOBvuqYykjIIE9sLdyQ/exec';
 
-        // Cores Oficiais da Régua QuestionPro (Red, Yellow, Light Green, Dark Green)
         const COLORS = {
-            critica: '#EF4136',          // Vermelho
-            aperfeicoamento: '#FDB913',  // Amarelo/Laranja
-            qualidade: '#56C174',        // Verde Claro
-            excelencia: '#00A650',       // Verde Escuro
-            textMuted: 'rgba(255,255,255,0.4)'
+            critica: '#EF4136',
+            aperfeicoamento: '#FDB913',
+            qualidade: '#56C174',
+            excelencia: '#00A650'
         };
 
         const getNPSColor = (score) => {
@@ -53,6 +49,18 @@
             if (score >= 50) return COLORS.qualidade;
             if (score >= 0) return COLORS.aperfeicoamento;
             return COLORS.critica;
+        };
+
+        const parseDate = (dateStr) => {
+            if (!dateStr) return new Date(0);
+            const parts = dateStr.split(' ');
+            if (parts.length < 2) return new Date(0);
+            const mes = parts[0];
+            const anoStr = parts[1];
+            const meses = { 'Jan': 0, 'Fev': 1, 'Mar': 2, 'Abr': 3, 'Mai': 4, 'Jun': 5, 'Jul': 6, 'Ago': 7, 'Set': 8, 'Out': 9, 'Nov': 10, 'Dez': 11 };
+            let ano = parseInt(anoStr);
+            if (ano < 100) ano += 2000;
+            return new Date(ano, meses[mes] || 0, 1);
         };
 
         const Icon = ({ name, size = 18, className = "" }) => {
@@ -69,7 +77,7 @@
                     });
                 }
             }, [name, size, className]);
-            return <span ref={iconRef} className="inline-flex items-center justify-center leading-none"></span>;
+            return <span ref={iconRef} className="inline-flex items-center justify-center leading-none text-white"></span>;
         };
 
         const Gauge = ({ value, label, sublabel, color, max = 100, min = -100 }) => {
@@ -103,45 +111,35 @@
             const [usersList, setUsersList] = useState([]);
             const [contractsList, setContractsList] = useState([]);
             const [tvSlide, setTvSlide] = useState(0); 
-            const [filters, setFilters] = useState({ mes: 'Todos', unidade: 'Todas', cliente: 'Todos', contrato: 'Todos' });
             
-            const [exportMenuOpen, setExportMenuOpen] = useState(false);
+            // Estados de Filtro
+            const [filters, setFilters] = useState({ unidade: 'Todas', cliente: 'Todos', contrato: 'Todos' });
+            const [selectedMonths, setSelectedMonths] = useState([]);
+            const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
+            const [expandedYears, setExpandedYears] = useState({});
+            
             const [editingLogin, setEditingLogin] = useState(null);
             const [newUser, setNewUser] = useState({ nome: '', email: '', tipo: 'Usuario', permissoes: '' });
+            const [surveyData, setSurveyData] = useState({ mesReferente: 'Mar 26', contrato: '', numContrato: '', cliente: '', nota: null, feedback: '' });
 
-            const [surveyData, setSurveyData] = useState({
-                mesReferente: 'Fev 26',
-                contrato: '',
-                numContrato: '',
-                cliente: '',
-                nota: null,
-                feedback: ''
-            });
+            // 1. Organização Hierárquica do Período (2020 - 2026)
+            const periodHierarchy = useMemo(() => {
+                const hierarchy = {};
+                const uniqueMonths = [...new Set(data.map(d => d.mes))].filter(Boolean);
+                
+                uniqueMonths.forEach(m => {
+                    const d = parseDate(m);
+                    const year = d.getFullYear();
+                    if (!hierarchy[year]) hierarchy[year] = [];
+                    hierarchy[year].push({ label: m, date: d });
+                });
 
-// Organiza os meses por ano de forma automática
-const periodHierarchy = useMemo(() => {
-    const hierarchy = {};
-    // Pega todos os meses únicos da base
-    const uniqueMonths = [...new Set(data.map(d => d.mes))].filter(Boolean);
-    
-    uniqueMonths.forEach(m => {
-        const parts = m.split(' ');
-        let ano = parts[1];
-        if (ano.length === 2) ano = "20" + ano; // Converte 20 para 2020
-        
-        if (!hierarchy[ano]) hierarchy[ano] = [];
-        hierarchy[ano].push(m);
-    });
+                return Object.keys(hierarchy).sort((a, b) => b - a).map(year => ({
+                    year,
+                    months: hierarchy[year].sort((a, b) => a.date - b.date).map(x => x.label)
+                }));
+            }, [data]);
 
-    // Ordena os anos (mais recente primeiro) e os meses dentro deles
-    return Object.keys(hierarchy)
-        .sort((a, b) => b - a)
-        .map(year => ({
-            year,
-            months: hierarchy[year].sort((a, b) => parseDate(a) - parseDate(b))
-        }));
-}, [data]);
-            
             const handleLogin = async (e) => {
                 if (e) e.preventDefault();
                 const u = document.getElementById('li').value;
@@ -151,87 +149,39 @@ const periodHierarchy = useMemo(() => {
                     const res = await fetch(`${SCRIPT_URL}?action=login&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`).then(r => r.json());
                     if (res.result === "success") {
                         setUser({ nome: res.nome, email: res.email, tipo: res.tipo });
-                        setData(res.metrics?.baseDados || []);
+                        const rawData = res.metrics?.baseDados || [];
+                        setData(rawData);
                         setUsersList(res.admData || []);
                         setContractsList(res.metrics?.listaContratos || []);
+                        
+                        const unique = [...new Set(rawData.map(d => d.mes))].filter(Boolean);
+                        setSelectedMonths(unique);
+                        
                         setView('dashboard');
-                    } else { alert("Acesso inválido."); }
-                } catch (e) { alert("Erro de conexão com o servidor."); }
+                    } else { alert("Login inválido."); }
+                } catch (e) { alert("Erro de conexão."); }
                 setLoading(false);
             };
 
-            const manageUser = async (mode, loginTarget = null) => {
-                setLoading(true);
-                try {
-                    const params = {
-                        action: mode === 'delete' ? 'deleteUser' : (editingLogin ? 'editUser' : 'addUser'),
-                        nome: newUser.nome,
-                        login: loginTarget || newUser.email,
-                        tipo: newUser.tipo,
-                        permissoes: newUser.permissoes
-                    };
-                    const res = await fetch(`${SCRIPT_URL}?${new URLSearchParams(params).toString()}`, { method: 'POST' });
-                    const result = await res.json();
-                    if (result.result === "success") {
-                        alert("Operação realizada com sucesso!");
-                        window.location.reload();
-                    }
-                } catch (err) { alert("Erro na gestão de usuários."); }
-                setLoading(false);
-            };
-
-            const handleSurveySubmit = async (e) => {
-                e.preventDefault();
-                if (surveyData.nota === null) return alert("Por favor, selecione uma nota.");
-                setLoading(true);
-                try {
-                    const formData = new FormData();
-                    formData.append("Mes Referente", surveyData.mesReferente);
-                    formData.append("Nome do Contrato", surveyData.contrato);
-                    formData.append("Número do Contrato", surveyData.numContrato);
-                    formData.append("Nome do Cliente", surveyData.cliente);
-                    formData.append("Nota", surveyData.nota);
-                    formData.append("Feedback", surveyData.feedback);
-                    formData.append("Email do Responsável", user.email);
-                    formData.append("Nome do Responsável", user.nome);
-
-                    await fetch(`${SCRIPT_URL}?action=survey&${new URLSearchParams(formData).toString()}`, { method: 'POST' });
-                    alert("Avaliação enviada com sucesso!");
-                    window.location.reload();
-                } catch (e) {
-                    alert("Erro ao enviar avaliação.");
-                }
-                setLoading(false);
-            };
-
-            const handleContractChange = (val) => {
-                const c = contractsList.find(x => x.exibicao === val);
-                if(c) {
-                    setSurveyData({...surveyData, contrato: val, numContrato: c.numero, cliente: c.cliente});
+            // 2. Funções de Seleção
+            const toggleYearSelection = (year, months) => {
+                const allSelected = months.every(m => selectedMonths.includes(m));
+                if (allSelected) {
+                    setSelectedMonths(prev => prev.filter(m => !months.includes(m)));
                 } else {
-                    setSurveyData({...surveyData, contrato: val, numContrato: '', cliente: ''});
+                    setSelectedMonths(prev => [...new Set([...prev, ...months])]);
                 }
             };
 
-            const handleExport = (type) => {
-                setExportMenuOpen(false);
-                let dataToExport = type === 'all' ? data : stats.filtered;
-                if (dataToExport.length === 0) return alert("Sem dados para exportar.");
-                
-                const csvRows = [
-                    ["Mes", "Unidade", "Cliente", "Contrato", "Nota", "Feedback"],
-                    ...dataToExport.map(r => [r.mes, r.unidade, r.cliente, r.contrato, r.nota, `"${r.feedback || ''}"`])
-                ];
-                const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
-                const link = document.createElement("a");
-                link.setAttribute("href", encodeURI(csvContent));
-                link.setAttribute("download", `Export_NPS_Makro.csv`);
-                link.click();
+            const toggleMonth = (mes) => {
+                setSelectedMonths(prev => 
+                    prev.includes(mes) ? prev.filter(m => m !== mes) : [...prev, mes]
+                );
             };
 
             const stats = useMemo(() => {
                 const filtered = data.filter(d => {
-                    return (filters.mes === 'Todos' || d.mes === filters.mes) &&
+                    return selectedMonths.includes(d.mes) &&
                            (filters.unidade === 'Todas' || d.unidade === filters.unidade) &&
                            (filters.cliente === 'Todos' || d.cliente === filters.cliente) &&
                            (filters.contrato === 'Todos' || d.contrato === filters.contrato);
@@ -241,18 +191,18 @@ const periodHierarchy = useMemo(() => {
                 const det = filtered.filter(x => x.nota <= 6).length;
                 const nps = total > 0 ? Math.round(((p - det) / total) * 100) : 0;
                 return { total, p, det, nps, neutros: total - p - det, filtered };
-            }, [data, filters]);
+            }, [data, filters, selectedMonths]);
 
             const monthlyNpsData = useMemo(() => {
-                const uniqueMonths = [...new Set(data.map(r => r.mes))].sort();
-                return uniqueMonths.map(m => {
-                    const dMes = data.filter(x => x.mes === m); 
+                const currentMonths = [...new Set(stats.filtered.map(r => r.mes))].sort((a, b) => parseDate(a) - parseDate(b));
+                return currentMonths.map(m => {
+                    const dMes = stats.filtered.filter(x => x.mes === m); 
                     const p = dMes.filter(x => x.nota >= 9).length;
                     const det = dMes.filter(x => x.nota <= 6).length;
                     const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
                     return { mes: m, score: nps };
                 });
-            }, [data]);
+            }, [stats.filtered]);
 
             useEffect(() => {
                 if (view === 'tv') {
@@ -265,19 +215,19 @@ const periodHierarchy = useMemo(() => {
                 const isClientSlide = tvSlide === 0;
                 return (
                     <div className="h-screen w-screen tv-mode-bg flex animate-fadeIn overflow-hidden">
-                        <div className="tv-sidebar">
+                        <div className="tv-sidebar shadow-2xl">
                             <div className="tv-sidebar-accent"></div>
                             <div className="space-y-4">
-                                <p className="text-gray-400 font-bold text-xs uppercase tracking-[4px] mb-2">NPS</p>
+                                <p className="text-[#023F88] font-black text-xl uppercase tracking-[4px]">NPS</p>
                                 <h1 className="text-[#023F88] text-5xl font-black leading-[0.95] uppercase">
-                                    NOTA NPS<br/>DE <span className="text-[#011f42]">{filters.mes === 'Todos' ? 'JANEIRO/26' : filters.mes}</span>
+                                    NOTA NPS<br/>DE <span className="text-[#011f42]">{selectedMonths.length === [...new Set(data.map(d=>d.mes))].length ? 'GERAL' : 'FILTRADO'}</span>
                                     <br/>POR <span className="text-[#011f42]">{isClientSlide ? 'CLIENTE' : 'UNIDADE'}</span>
                                 </h1>
-                                <p className="text-gray-300 text-[10px] font-bold mt-10">ATUALIZADO {new Date().toLocaleDateString()}</p>
+                                <p className="text-gray-400 text-[12px] font-bold mt-12">Atualizado {new Date().toLocaleDateString()}</p>
                             </div>
                         </div>
                         <div className="tv-main-content">
-                            <div className="absolute top-10 right-14 text-right opacity-30 text-[10px] font-black tracking-[3px] text-gray-500 uppercase leading-tight">Engenharia<br/>de Movimentação</div>
+                            <div className="absolute top-10 right-14 text-right opacity-40 text-[11px] font-black tracking-[4px] text-gray-600 uppercase">Engenharia<br/>de Movimentação</div>
                             <div className="flex justify-center gap-12 mt-4">
                                 <Gauge label="Índice NPS" value={stats.nps} color={getNPSColor(stats.nps)} />
                                 <Gauge label="Taxa de Resposta" sublabel="%" value={83} color={COLORS.excelencia} />
@@ -285,22 +235,22 @@ const periodHierarchy = useMemo(() => {
                             <div className="tv-table-container">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b-2 border-gray-400/20 text-gray-500 text-[11px] font-black uppercase tracking-wider">
+                                        <tr className="border-b-2 border-gray-400/30 text-gray-600 text-[13px] font-black uppercase tracking-widest">
                                             <th className="pb-4 text-left">{isClientSlide ? 'CLIENTE' : 'UNIDADE'}</th>
                                             <th className="pb-4 text-right">SCORE NPS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-gray-700">
-                                        {(isClientSlide ? [...new Set(data.map(d => d.cliente))] : [...new Set(data.map(d => d.unidade))])
-                                            .slice(0, 6).map((item, idx) => {
-                                                const dItem = data.filter(x => (isClientSlide ? x.cliente : x.unidade) === item);
+                                        {(isClientSlide ? [...new Set(stats.filtered.map(d => d.cliente))] : [...new Set(stats.filtered.map(d => d.unidade))])
+                                            .slice(0, 7).map((item, idx) => {
+                                                const dItem = stats.filtered.filter(x => (isClientSlide ? x.cliente : x.unidade) === item);
                                                 const p = dItem.filter(x => x.nota >= 9).length;
                                                 const det = dItem.filter(x => x.nota <= 6).length;
                                                 const score = Math.round(((p - det) / dItem.length) * 100);
                                                 return (
-                                                    <tr key={idx} className="border-b border-gray-400/10 hover:bg-white/5 transition-all">
+                                                    <tr key={idx} className="border-b border-gray-400/20">
                                                         <td className="py-4 font-bold uppercase text-lg">{item}</td>
-                                                        <td className="py-4 text-right font-black text-xl" style={{ color: getNPSColor(score) }}>{score}</td>
+                                                        <td className="py-4 text-right font-black text-2xl" style={{ color: getNPSColor(score) }}>{score}</td>
                                                     </tr>
                                                 );
                                             })}
@@ -308,7 +258,7 @@ const periodHierarchy = useMemo(() => {
                                 </table>
                             </div>
                             <div className="flex justify-end mt-auto">
-                                <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" className="h-14 grayscale brightness-50 opacity-20" />
+                                <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" className="h-16 brightness-50 opacity-30" />
                                 <button onClick={() => setView('dashboard')} className="fixed bottom-4 left-4 opacity-0 hover:opacity-100 p-2 bg-black text-white text-[10px] rounded">Sair TV</button>
                             </div>
                         </div>
@@ -317,300 +267,160 @@ const periodHierarchy = useMemo(() => {
             }
 
             return (
-                <div className="min-h-screen flex flex-col">
-                    <header className="p-6 flex flex-col items-center bg-black/40 border-b border-white/5 backdrop-blur-md sticky top-0 z-50">
-                        <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" className="h-10 mb-2" />
-                        <span className="text-[10px] tracking-[5px] font-bold opacity-40 uppercase">Painel NPS | Makro Engenharia</span>
+                <div className="min-h-screen flex flex-col animate-fadeIn">
+                    <header className="p-6 flex flex-col items-center border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50 text-center">
+                        <img src="https://makroengenharia.com.br/wp-content/uploads/2023/03/logo-1.png" className="h-12 mb-2" />
+                        <span className="text-[10px] tracking-[6px] font-bold opacity-40 uppercase">Painel NPS | Makro Engenharia</span>
                     </header>
 
-                    <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
-                        {loading && <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center backdrop-blur-sm"><div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div></div>}
+                    <main className="flex-1 p-6 md:p-12 max-w-7xl mx-auto w-full">
+                        {loading && <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center"><div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div></div>}
 
                         {view === 'login' && (
-                            <div className="flex flex-col items-center justify-center mt-20 animate-slide">
-                                <form onSubmit={handleLogin} className="w-full max-w-md bg-white/5 p-12 rounded-[40px] border border-white/10 shadow-2xl">
-                                    <h2 className="text-3xl font-black mb-8 text-center tracking-tighter uppercase">Login</h2>
-                                    <input className="w-full bg-white/10 p-4 rounded-2xl mb-4 outline-none border border-white/10 focus:ring-2 ring-red-600 transition-all text-white" placeholder="E-mail corporativo" id="li" required />
-                                    <input className="w-full bg-white/10 p-4 rounded-2xl mb-8 outline-none border border-white/10 focus:ring-2 ring-red-600 transition-all text-white" type="password" placeholder="Senha" id="lp" required />
-                                    <button type="submit" className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase hover:bg-red-700 shadow-xl shadow-red-600/20 active:scale-95 transition-all">Entrar</button>
+                            <div className="flex flex-col items-center justify-center mt-20">
+                                <form onSubmit={handleLogin} className="w-full max-w-md bg-white/5 p-12 rounded-[40px] border border-white/10 shadow-2xl backdrop-blur-xl">
+                                    <h2 className="text-3xl font-black mb-8 text-center uppercase tracking-tighter">Makro Engenharia</h2>
+                                    <input className="w-full bg-white/10 p-5 rounded-2xl mb-4 outline-none border border-white/10 focus:ring-2 ring-red-600 transition-all text-white" placeholder="E-mail" id="li" required />
+                                    <input className="w-full bg-white/10 p-5 rounded-2xl mb-8 outline-none border border-white/10 focus:ring-2 ring-red-600 transition-all text-white" type="password" placeholder="Senha" id="lp" required />
+                                    <button type="submit" className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase hover:bg-red-700 shadow-xl shadow-red-600/20 active:scale-95 transition-all">Acessar</button>
                                 </form>
                             </div>
                         )}
 
                         {view === 'dashboard' && (
-                            <div className="space-y-8 animate-slide">
-                                <div className="flex justify-between items-center">
+                            <div className="space-y-8">
+                                <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-white">
                                     <div>
-                                        <h2 className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{user?.tipo}</h2>
-                                        <p className="text-2xl font-black tracking-tight">{user?.nome}</p>
+                                        <h2 className="text-[10px] font-bold opacity-40 uppercase tracking-[4px]">{user?.tipo}</h2>
+                                        <p className="text-3xl font-black uppercase tracking-tight">{user?.nome}</p>
                                     </div>
                                     <div className="flex gap-2">
                                         {(user?.tipo === 'Usuario' || user?.tipo === 'ADM MASTER') && (
-                                            <button onClick={() => setView('survey')} className="p-3 bg-red-600/10 text-red-500 border border-red-600/20 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-red-600/20 transition-all" title="Nova Avaliação">
-                                                <Icon name="PlusCircle" size={18} /> <span className="hidden md:inline">Avaliar</span>
+                                            <button onClick={() => setView('survey')} className="px-6 py-4 bg-red-600/10 text-red-500 border border-red-600/20 rounded-2xl font-black text-[11px] uppercase flex items-center gap-3 hover:bg-red-600/20 transition-all">
+                                                <Icon name="PlusCircle" size={16} /> AVALIAR
                                             </button>
                                         )}
                                         {user?.tipo === 'ADM MASTER' && (
-                                            <>
-                                                <button onClick={() => setView('tv')} className="p-3 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-yellow-500/20 transition-all" title="Modo Apresentação">
-                                                    <Icon name="Tv" size={18} />
-                                                </button>
-                                                <button onClick={() => setView('users')} className="p-3 bg-blue-600/10 text-blue-500 border border-blue-500/20 rounded-2xl font-bold text-xs uppercase hover:bg-blue-600/20 transition-all" title="Gerir Usuários">
-                                                    <Icon name="Users" size={18} />
-                                                </button>
-                                            </>
-                                        )}
-                                        <div className="relative">
-                                            <button onClick={() => setExportMenuOpen(!exportMenuOpen)} className="p-3 bg-green-600/10 text-green-500 border border-green-600/20 rounded-2xl font-bold text-xs hover:bg-green-600/20 transition-all" title="Exportar">
-                                                <Icon name="FileSpreadsheet" size={18} />
+                                            <button onClick={() => setView('tv')} className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-blue-600/20 transition-all" title="Apresentação">
+                                                <Icon name="Monitor" />
                                             </button>
-                                            {exportMenuOpen && (
-                                                <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#010816] border border-white/10 shadow-2xl z-50 overflow-hidden">
-                                                    <button onClick={() => handleExport('filtered')} className="w-full text-left p-4 text-[10px] font-bold uppercase hover:bg-white/5 transition flex items-center gap-2 border-b border-white/5"><Icon name="Filter" size={14} className="text-green-500"/> Exportar Filtrado</button>
-                                                    <button onClick={() => handleExport('all')} className="w-full text-left p-4 text-[10px] font-bold uppercase hover:bg-white/5 transition flex items-center gap-2"><Icon name="Download" size={14} className="text-blue-500"/> Exportar Tudo</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button onClick={() => window.location.reload()} className="p-3 bg-white/5 rounded-2xl border border-white/10 hover:bg-red-600/10 hover:border-red-600/30 transition-all group">
-                                            <Icon name="LogOut" className="group-hover:text-red-500" />
+                                        )}
+                                        <button onClick={() => window.location.reload()} className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:text-red-500 transition-all" title="Sair">
+                                            <Icon name="LogOut" />
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white/5 p-6 rounded-[30px] border border-white/10">
-                                    {/* Filtro Mês */}
-<div className="relative">
-    <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-2 block tracking-widest text-white">Período</label>
-    <button 
-        onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)} 
-        className="w-full bg-[#010816] border border-white/10 p-4 rounded-2xl text-xs text-white text-left flex justify-between items-center hover:bg-white/10 transition"
-    >
-        <span className="truncate">
-            {selectedMonths.length === [...new Set(data.map(d=>d.mes))].length ? 'Todo o Período' : `${selectedMonths.length} Selecionados`}
-        </span>
-        <Icon name="ChevronDown" size={16} className={isPeriodDropdownOpen ? "rotate-180" : ""} />
-    </button>
-    
-    {isPeriodDropdownOpen && (
-        <div className="absolute top-full left-0 w-full mt-2 bg-[#010816] border border-white/10 rounded-2xl shadow-2xl z-[60] max-h-96 overflow-y-auto p-4 custom-scrollbar animate-fadeIn">
-            {periodHierarchy.map(item => (
-                <div key={item.year} className="mb-3">
-                    {/* Linha do Ano */}
-                    <div className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl cursor-pointer" onClick={() => toggleYear(item.year, item.months)}>
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${item.months.every(m => selectedMonths.includes(m)) ? 'bg-green-600 border-green-600' : 'border-white/20'}`}>
-                            {item.months.every(m => selectedMonths.includes(m)) && <Icon name="Check" size={10}/>}
-                        </div>
-                        <span className="text-sm font-black text-white">{item.year}</span>
-                    </div>
-                    
-                    {/* Lista de Meses do Ano */}
-                    <div className="ml-6 grid grid-cols-2 gap-1 mt-1 border-l border-white/10 pl-2">
-                        {item.months.map(m => (
-                            <div key={m} onClick={() => toggleMonth(m)} className="flex items-center gap-2 p-1.5 hover:bg-white/5 rounded-lg cursor-pointer transition text-white">
-                                <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${selectedMonths.includes(m) ? 'bg-blue-600 border-blue-600' : 'border-white/10'}`}>
-                                    {selectedMonths.includes(m) && <Icon name="Check" size={8}/>}
-                                </div>
-                                <span className="text-[10px] font-medium uppercase">{m.split(' ')[0]}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
-    )}
-</div>
-                                    {/* Filtro Unidade */}
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Unidade</label>
-                                        <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.unidade} onChange={e => setFilters({...filters, unidade: e.target.value})}>
-                                            <option value="Todas">Todas</option>
-                                            {[...new Set(data.map(d => d.unidade))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
-                                        </select>
+                                {/* FILTROS HIERÁRQUICOS */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-xl relative z-40">
+                                    <div className="relative">
+                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-2 block tracking-widest text-white">Período</label>
+                                        <button 
+                                            onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)} 
+                                            className="w-full bg-[#010816] border border-white/10 p-4 rounded-2xl text-xs text-white text-left flex justify-between items-center hover:bg-white/10 transition"
+                                        >
+                                            <span className="truncate">{selectedMonths.length === [...new Set(data.map(d=>d.mes))].length ? 'Todo o Período' : `${selectedMonths.length} Meses`}</span>
+                                            <Icon name="ChevronDown" size={16} className={isPeriodDropdownOpen ? "rotate-180" : ""} />
+                                        </button>
+                                        
+                                        {isPeriodDropdownOpen && (
+                                            <div className="absolute top-full left-0 w-full mt-2 bg-[#010816] border border-white/10 rounded-2xl shadow-2xl z-[60] max-h-96 overflow-y-auto p-4 custom-scrollbar animate-fadeIn">
+                                                <div className="mb-4 border-b border-white/10 pb-2 flex justify-between">
+                                                    <button onClick={() => setSelectedMonths([...new Set(data.map(d=>d.mes))])} className="text-[10px] font-black text-blue-400 hover:text-white uppercase tracking-tighter">Selecionar Tudo</button>
+                                                    <button onClick={() => setSelectedMonths([])} className="text-[10px] font-black text-red-500 hover:text-white uppercase tracking-tighter">Limpar</button>
+                                                </div>
+                                                
+                                                {periodHierarchy.map(item => (
+                                                    <div key={item.year} className="mb-2">
+                                                        <div className="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl cursor-pointer group">
+                                                            <div className="flex items-center gap-3 flex-1" onClick={() => toggleYearSelection(item.year, item.months)}>
+                                                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${item.months.every(m => selectedMonths.includes(m)) ? 'bg-green-600 border-green-600' : 'border-white/20'}`}>
+                                                                    {item.months.every(m => selectedMonths.includes(m)) && <Icon name="Check" size={10}/>}
+                                                                </div>
+                                                                <span className="text-sm font-black text-white">{item.year}</span>
+                                                            </div>
+                                                            <button onClick={(e) => { e.stopPropagation(); setExpandedYears(prev => ({ ...prev, [item.year]: !prev[item.year] })); }} className="p-1 opacity-40 group-hover:opacity-100 text-white">
+                                                                <Icon name={expandedYears[item.year] ? "ChevronUp" : "ChevronDown"} size={14} />
+                                                            </button>
+                                                        </div>
+                                                        {expandedYears[item.year] && (
+                                                            <div className="ml-6 mt-1 space-y-1 border-l border-white/10 pl-2">
+                                                                {item.months.map(m => (
+                                                                    <div key={m} onClick={() => toggleMonth(m)} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition text-white">
+                                                                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${selectedMonths.includes(m) ? 'bg-blue-600 border-blue-600' : 'border-white/10'}`}>
+                                                                            {selectedMonths.includes(m) && <Icon name="Check" size={8}/>}
+                                                                        </div>
+                                                                        <span className="text-[11px] font-medium uppercase tracking-tight">{m.split(' ')[0]}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    {/* Filtro Cliente */}
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Cliente</label>
-                                        <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.cliente} onChange={e => setFilters({...filters, cliente: e.target.value})}>
-                                            <option value="Todos">Todos</option>
-                                            {[...new Set(data.map(d => d.cliente))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
-                                        </select>
-                                    </div>
-                                    {/* Filtro Contrato (Apenas Nome) */}
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Contrato</label>
-                                        <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.contrato} onChange={e => setFilters({...filters, contrato: e.target.value})}>
-                                            <option value="Todos">Todos</option>
-                                            {[...new Set(data.map(d => d.contrato))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
-                                        </select>
-                                    </div>
+                                    {['Unidade', 'Cliente', 'Contrato'].map(f => (
+                                        <div key={f}>
+                                            <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-2 block tracking-widest text-white">{f}</label>
+                                            <select 
+                                                className="w-full bg-[#010816] border border-white/10 p-4 rounded-2xl outline-none text-xs text-white hover:bg-white/10 transition"
+                                                value={filters[f.toLowerCase()]} 
+                                                onChange={e => setFilters({...filters, [f.toLowerCase()]: e.target.value})}
+                                            >
+                                                <option value={f === 'Unidade' ? 'Todas' : 'Todos'}>Todos</option>
+                                                {[...new Set(data.map(d => d[f.toLowerCase()]))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            </select>
+                                        </div>
+                                    ))}
                                 </div>
 
+                                {/* CARDS NPS */}
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                     {[
                                         { l: 'Total Respostas', v: stats.total, c: 'white' },
                                         { l: 'Promotores', v: stats.p, c: COLORS.excelencia },
                                         { l: 'Neutros', v: stats.neutros, c: COLORS.aperfeicoamento },
                                         { l: 'Detratores', v: stats.det, c: COLORS.critica },
-                                        { l: 'NPS Score', v: stats.nps, c: getNPSColor(stats.nps), highlight: true }
+                                        { l: 'Índice NPS', v: stats.nps, c: getNPSColor(stats.nps), highlight: true }
                                     ].map((s, i) => (
-                                        <div key={i} className={`p-6 rounded-3xl border ${s.highlight ? 'bg-white/10 border-white/30' : 'bg-white/5 border-white/10'} text-center`}>
-                                            <span className="text-[10px] font-bold opacity-40 uppercase block mb-1">{s.l}</span>
-                                            <span className="text-3xl font-black" style={{ color: s.c }}>{s.v}</span>
+                                        <div key={i} className={`p-8 rounded-[40px] border ${s.highlight ? 'bg-white/10 border-white/30' : 'bg-white/5 border-white/10'} text-center shadow-lg`}>
+                                            <span className="text-[11px] font-black opacity-40 uppercase block mb-2 tracking-widest text-white">{s.l}</span>
+                                            <span className="text-4xl font-black" style={{ color: s.c }}>{s.v}</span>
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 h-[400px]">
-                                    <div className="mb-4 flex justify-between items-center">
-                                        <h4 className="text-xs font-bold uppercase opacity-40">Índice NPS Mensal (Régua Makro)</h4>
+                                {/* GRÁFICO NPS MENSAL */}
+                                <div className="bg-white/5 p-10 rounded-[40px] border border-white/10 h-[450px] shadow-2xl">
+                                    <div className="mb-6 flex justify-between items-center text-white">
+                                        <h4 className="text-xs font-black uppercase opacity-40 tracking-widest">Desempenho NPS Mensal</h4>
+                                        <div className="flex gap-4 text-[9px] font-black uppercase">
+                                            <span style={{color: COLORS.excelencia}}>● Excelência</span>
+                                            <span style={{color: COLORS.qualidade}}>● Qualidade</span>
+                                            <span style={{color: COLORS.aperfeicoamento}}>● Aperfeiçoamento</span>
+                                            <span style={{color: COLORS.critica}}>● Crítica</span>
+                                        </div>
                                     </div>
                                     <ResponsiveContainer width="100%" height="90%">
                                         <BarChart data={monthlyNpsData}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
                                             <XAxis dataKey="mes" stroke="#ffffff30" fontSize={10} />
                                             <YAxis stroke="#ffffff30" fontSize={10} domain={[-100, 100]} ticks={[-100, -50, 0, 50, 75, 100]} />
-                                            <Tooltip 
-                                                cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                                                contentStyle={{ background: '#010816', border: '1px solid #ffffff20', borderRadius: '15px', color: '#fff' }} 
-                                            />
-                                            <ReferenceLine y={0} stroke="#ffffff30" />
-                                            <Bar dataKey="score" radius={[8, 8, 0, 0]}>
-                                                {monthlyNpsData.map((entry, index) => (
-                                                    <Cell key={index} fill={getNPSColor(entry.score)} />
-                                                ))}
+                                            <Tooltip cursor={{fill: 'rgba(255,255,255,0.03)'}} contentStyle={{ background: '#010816', border: '1px solid #ffffff10', borderRadius: '15px' }} />
+                                            <ReferenceLine y={0} stroke="#ffffff20" />
+                                            <Bar dataKey="score" radius={[10, 10, 0, 0]}>
+                                                {monthlyNpsData.map((e, i) => <Cell key={i} fill={getNPSColor(e.score)} />)}
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
-                                </div>
-
-                                <div className="bg-white/5 border border-white/10 rounded-[40px] overflow-hidden">
-                                    <div className="p-6 border-b border-white/5">
-                                        <h4 className="text-xs font-bold uppercase opacity-40">Respostas Recentes</h4>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-xs">
-                                            <thead>
-                                                <tr className="bg-white/5 text-red-500 font-bold uppercase tracking-widest">
-                                                    <th className="p-5">Mês</th>
-                                                    <th className="p-5">Contrato</th>
-                                                    <th className="p-5">Cliente</th>
-                                                    <th className="p-5 text-center">Nota</th>
-                                                    <th className="p-5">Comentário</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-white/5">
-                                                {stats.filtered.slice().reverse().map((r, i) => (
-                                                    <tr key={i} className="hover:bg-white/5 transition-all text-white">
-                                                        <td className="p-5 opacity-40">{r.mes}</td>
-                                                        <td className="p-5 font-bold text-blue-400">{r.numContrato} - {r.contrato}</td>
-                                                        <td className="p-5 uppercase">{r.cliente}</td>
-                                                        <td className="p-5 text-center">
-                                                            <span className="px-3 py-1 rounded-lg font-black" style={{ background: r.nota >= 9 ? `${COLORS.excelencia}20` : r.nota <= 6 ? `${COLORS.critica}20` : `${COLORS.aperfeicoamento}20`, color: r.nota >= 9 ? COLORS.excelencia : r.nota <= 6 ? COLORS.critica : COLORS.aperfeicoamento }}>{r.nota}</span>
-                                                        </td>
-                                                        <td className="p-5 opacity-60 italic leading-relaxed">"{r.feedback || '-'}"</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'survey' && (
-                            <div className="max-w-2xl mx-auto space-y-6 animate-slide">
-                                <div className="flex justify-between items-center mb-8">
-                                    <h2 className="text-2xl font-black uppercase flex items-center gap-3"><Icon name="PlusCircle" className="text-red-500" /> Nova Avaliação</h2>
-                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition text-white">Cancelar</button>
-                                </div>
-                                <form onSubmit={handleSurveySubmit} className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6">
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Mês de Referência</label>
-                                        <select className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white" value={surveyData.mesReferente} onChange={e => setSurveyData({...surveyData, mesReferente: e.target.value})}>
-                                            <option value="Jan 26">Jan 26</option>
-                                            <option value="Fev 26">Fev 26</option>
-                                            <option value="Mar 26">Mar 26</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Contrato</label>
-                                        <select className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white" required value={surveyData.contrato} onChange={e => handleContractChange(e.target.value)}>
-                                            <option value="">Selecione...</option>
-                                            {contractsList.map(c => <option key={c.numero} value={c.exibicao}>{c.exibicao}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Número do Contrato</label>
-                                        <input className="w-full bg-white/10 p-4 rounded-xl text-sm text-white opacity-50 cursor-not-allowed" readOnly value={surveyData.numContrato} />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Sua Nota (0 a 10)</label>
-                                        <div className="flex justify-between gap-2">
-                                            {[...Array(11).keys()].map(n => (
-                                                <button key={n} type="button" onClick={() => setSurveyData({...surveyData, nota: n})} className={`flex-1 h-12 rounded-lg font-bold transition-all border ${surveyData.nota === n ? 'border-red-600 bg-red-600/20 text-red-500' : 'border-white/10 bg-white/5 hover:border-white/30 text-white'}`}>
-                                                    {n}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold opacity-30 uppercase block mb-2">Feedback</label>
-                                        <textarea className="w-full bg-[#010816] border border-white/10 p-4 rounded-xl text-sm text-white h-32 outline-none focus:ring-2 ring-red-600 transition-all" placeholder="Sua opinião..." value={surveyData.feedback} onChange={e => setSurveyData({...surveyData, feedback: e.target.value})}></textarea>
-                                    </div>
-                                    <button type="submit" className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase hover:bg-red-700 shadow-xl shadow-red-600/20 active:scale-95 transition-all">Enviar Avaliação</button>
-                                </form>
-                            </div>
-                        )}
-
-                        {view === 'users' && (
-                            <div className="space-y-6 animate-slide">
-                                <div className="flex justify-between items-center mb-8">
-                                    <h2 className="text-2xl font-black uppercase flex items-center gap-3"><Icon name="Users" className="text-blue-500" /> Gestão de Usuários</h2>
-                                    <button onClick={() => setView('dashboard')} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition text-white">Voltar</button>
-                                </div>
-                                <div className={`p-8 rounded-3xl bg-white/5 border border-white/10 ${editingLogin ? 'border-blue-500' : ''} transition-all`}>
-                                    <h4 className="text-[10px] uppercase font-bold opacity-40 mb-6 tracking-widest text-white">{editingLogin ? `Editando: ${editingLogin}` : 'Novo Cadastro'}</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        <input value={newUser.nome} className="bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 text-white" placeholder="Nome" onChange={e => setNewUser({...newUser, nome: e.target.value})} />
-                                        <input value={newUser.email} disabled={!!editingLogin} className={`bg-white/10 p-4 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500 text-white ${editingLogin ? 'opacity-50' : ''}`} placeholder="Login" onChange={e => setNewUser({...newUser, email: e.target.value})} />
-                                        <select value={newUser.tipo} className="bg-[#010816] p-4 rounded-xl outline-none text-sm text-white" onChange={e => setNewUser({...newUser, tipo: e.target.value})}>
-                                            <option value="Usuario">Usuário</option>
-                                            <option value="ADM MASTER">ADM Master</option>
-                                        </select>
-                                        <button onClick={() => manageUser('add')} className={`rounded-xl font-bold text-xs uppercase shadow-lg transition active:scale-95 text-white ${editingLogin ? 'bg-blue-600' : 'bg-green-600'}`}>
-                                            {editingLogin ? 'Atualizar' : 'Salvar'}
-                                        </button>
-                                    </div>
-                                    {editingLogin && <button onClick={() => { setEditingLogin(null); setNewUser({nome:'', email:'', tipo:'Usuario', permissoes:''}); }} className="mt-4 text-[9px] uppercase font-bold opacity-40 hover:opacity-100 transition underline text-white">Cancelar Edição</button>}
-                                </div>
-                                <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
-                                    <table className="w-full text-xs text-left">
-                                        <thead className="bg-white/10 text-blue-400 font-bold uppercase">
-                                            <tr><th className="p-5">Nome</th><th className="p-5">Login</th><th className="p-5">Tipo</th><th className="p-5 text-center">Ações</th></tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {usersList.map(u => (
-                                                <tr key={u.login} className="text-white hover:bg-white/5 transition-all">
-                                                    <td className="p-5 font-bold uppercase">{u.nome}</td>
-                                                    <td className="p-5 opacity-60">{u.login}</td>
-                                                    <td className="p-5"><span className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded text-[10px] font-bold">{u.tipo}</span></td>
-                                                    <td className="p-5 text-center">
-                                                        <div className="flex justify-center gap-4">
-                                                            <button onClick={() => { setEditingLogin(u.login); setNewUser({nome:u.nome, email:u.login, tipo:u.tipo, permissoes:u.permissoes || ""}); window.scrollTo(0,0); }} className="text-blue-400 hover:text-white transition"><Icon name="Pencil" size={16}/></button>
-                                                            <button onClick={() => { if(confirm('Excluir?')) manageUser('delete', u.login); }} className="text-red-500 hover:text-white transition"><Icon name="Trash2" size={16}/></button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
                                 </div>
                             </div>
                         )}
                     </main>
 
-                    <footer className="p-8 text-center opacity-20 text-[9px] font-black uppercase tracking-[5px] text-white">
-                        Marketing & Qualidade | Makro Engenharia
+                    <footer className="p-10 text-center opacity-20 text-[10px] font-black uppercase tracking-[8px] text-white">
+                        MAKRO ENGENHARIA | BRAND HUB
                     </footer>
                 </div>
             );
@@ -619,39 +429,5 @@ const periodHierarchy = useMemo(() => {
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('Service Worker registrado:', registration.scope);
-      })
-      .catch((error) => {
-        console.log('Erro ao registrar Service Worker:', error);
-      });
-  });
-}
-
-   const toggleYear = (months) => {
-    const allSelected = months.every(m => selectedMonths.includes(m));
-    if (allSelected) {
-        // Se todos já estão marcados, desmarca o ano todo
-        setSelectedMonths(prev => prev.filter(m => !months.includes(m)));
-    } else {
-        // Se falta algum, marca o ano inteiro
-        setSelectedMonths(prev => [...new Set([...prev, ...months])]);
-    }
-};
-
-const toggleMonth = (mes) => {
-    setSelectedMonths(prev => 
-        prev.includes(mes) ? prev.filter(m => m !== mes) : [...prev, mes]
-    );
-};
-    
-</script>
-    
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS v08.07</title>
+    <title>Painel NPS - v08.01</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -12,10 +12,6 @@
     <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
     <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-
     <style>
         body { font-family: 'Montserrat', sans-serif; background-color: #010816; color: #f1f5f9; margin: 0; }
         .tv-mode-bg { background-color: #e9eef3 !important; color: #333 !important; }
@@ -38,24 +34,7 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
-        // 1. IMPORTS DO FIREBASE
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-        // 2. CONFIGURAÇÃO DO FIREBASE
-        const firebaseConfig = {
-            apiKey: "AIzaSyDliwQcGZLPwP9FfgUQYzKMww1zP0iEQ-c",
-            authDomain: "painel-nps.firebaseapp.com",
-            projectId: "painel-nps",
-            storageBucket: "painel-nps.firebasestorage.app",
-            messagingSenderId: "981053843206",
-            appId: "1:981053843206:web:ef9dc9d8435ff7e8a0e087"
-        };
-
-        const appFirebase = initializeApp(firebaseConfig);
-        const auth = getAuth(appFirebase);
-
+    <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, LabelList } = window.Recharts;
 
@@ -153,7 +132,7 @@
             const [contractsList, setContractsList] = useState([]);
             const [tvSlide, setTvSlide] = useState(0); 
             const [filters, setFilters] = useState({ mes: 'Todos', unidade: 'Todas', cliente: 'Todos', contrato: 'Todos' });
-            const [selectedMonthInChart, setSelectedMonthInChart] = useState(null); 
+            const [selectedMonthInChart, setSelectedMonthInChart] = useState(null); // Drill-down do gráfico
             
             const [exportMenuOpen, setExportMenuOpen] = useState(false);
             const [editingLogin, setEditingLogin] = useState(null);
@@ -174,34 +153,19 @@
 
             const handleLogin = async (e) => {
                 if (e) e.preventDefault();
-                const email = document.getElementById('li').value;
-                const pass = document.getElementById('lp').value;
+                const u = document.getElementById('li').value;
+                const p = document.getElementById('lp').value;
                 setLoading(true);
-                
                 try {
-                    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-                    const fbUser = userCredential.user;
-
-                    const res = await fetch(`${SCRIPT_URL}?action=login&user=${encodeURIComponent(fbUser.email)}`).then(r => r.json());
-                    
+                    const res = await fetch(`${SCRIPT_URL}?action=login&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`).then(r => r.json());
                     if (res.result === "success") {
-                        setUser({ 
-                            nome: res.nome, 
-                            email: fbUser.email, 
-                            tipo: res.tipo, 
-                            uid: fbUser.uid 
-                        });
+                        setUser({ nome: res.nome, email: res.email, tipo: res.tipo });
                         setRawData(res.metrics?.baseDados || []);
                         setUsersList(res.admData || []);
                         setContractsList(res.metrics?.listaContratos || []);
                         setView('dashboard');
-                    } else {
-                        alert("Login OK no Firebase, mas este e-mail não está cadastrado na base da Makro.");
-                    }
-                } catch (error) {
-                    console.error(error);
-                    alert("E-mail ou senha incorretos.");
-                }
+                    } else { alert("Acesso inválido."); }
+                } catch (e) { alert("Erro de conexão com o servidor."); }
                 setLoading(false);
             };
 
@@ -239,7 +203,6 @@
                     formData.append("Feedback", surveyData.feedback);
                     formData.append("Email do Responsável", user.email);
                     formData.append("Nome do Responsável", user.nome);
-                    formData.append("UID_Firebase", user.uid);
 
                     await fetch(`${SCRIPT_URL}?action=survey&${new URLSearchParams(formData).toString()}`, { method: 'POST' });
                     alert("Avaliação enviada com sucesso!");
@@ -273,6 +236,7 @@
                 link.click();
             };
 
+            // Resetar o mês selecionado no gráfico quando o filtro de mês mudar
             useEffect(() => {
                 setSelectedMonthInChart(null);
             }, [filters.mes]);
@@ -281,6 +245,7 @@
                 const filtered = data.filter(d => {
                     let matchMes = false;
                     
+                    // Se houver um mês selecionado via clique no gráfico, ele tem prioridade para os indicadores
                     if (selectedMonthInChart) {
                         matchMes = d.mes === selectedMonthInChart;
                     } else {
@@ -320,22 +285,17 @@
 
                 const sortedMonths = sortMonthsChronologically(monthsToShow);
                 return sortedMonths.map(m => {
-                    const dMes = data.filter(x => 
-                        x.mes === m &&
-                        (filters.unidade === 'Todas' || x.unidade === filters.unidade) &&
-                        (filters.cliente === 'Todos' || x.cliente === filters.cliente) &&
-                        (filters.contrato === 'Todos' || x.contrato === filters.contrato)
-                    ); 
-                    
+                    const dMes = data.filter(x => x.mes === m); 
                     const p = dMes.filter(x => x.nota >= 9).length;
                     const det = dMes.filter(x => x.nota <= 6).length;
                     const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
                     return { mes: m, score: nps };
                 });
-            }, [data, filters]);
+            }, [data, filters.mes]);
 
             const handleBarClick = (data) => {
                 if (data && data.mes) {
+                    // Se clicar no mesmo mês, desmarca (volta para o filtro geral)
                     setSelectedMonthInChart(prev => prev === data.mes ? null : data.mes);
                 }
             };
@@ -431,7 +391,7 @@
                                         <p className="text-2xl font-black tracking-tight">{user?.nome}</p>
                                     </div>
                                     <div className="flex gap-2">
-                                        {user?.tipo === 'Usuario' && (
+                                        {(user?.tipo === 'Usuario' || user?.tipo === 'ADM MASTER') && (
                                             <button onClick={() => setView('survey')} className="p-3 bg-red-600/10 text-red-500 border border-red-600/20 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-red-600/20 transition-all" title="Nova Avaliação">
                                                 <Icon name="PlusCircle" size={18} /> <span className="hidden md:inline">Avaliar</span>
                                             </button>
@@ -488,30 +448,21 @@
                                         <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Unidade</label>
                                         <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.unidade} onChange={e => setFilters({...filters, unidade: e.target.value})}>
                                             <option value="Todas">Todas</option>
-                                            {[...new Set(data
-                                                .filter(d => (filters.cliente === 'Todos' || d.cliente === filters.cliente) && (filters.contrato === 'Todos' || d.contrato === filters.contrato))
-                                                .map(d => d.unidade))]
-                                                .filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            {[...new Set(data.map(d => d.unidade))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Cliente</label>
                                         <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.cliente} onChange={e => setFilters({...filters, cliente: e.target.value})}>
                                             <option value="Todos">Todos</option>
-                                            {[...new Set(data
-                                                .filter(d => (filters.unidade === 'Todas' || d.unidade === filters.unidade) && (filters.contrato === 'Todos' || d.contrato === filters.contrato))
-                                                .map(d => d.cliente))]
-                                                .filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            {[...new Set(data.map(d => d.cliente))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Contrato</label>
                                         <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.contrato} onChange={e => setFilters({...filters, contrato: e.target.value})}>
                                             <option value="Todos">Todos</option>
-                                            {[...new Set(data
-                                                .filter(d => (filters.unidade === 'Todas' || d.unidade === filters.unidade) && (filters.cliente === 'Todos' || d.cliente === filters.cliente))
-                                                .map(d => d.contrato))]
-                                                .filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            {[...new Set(data.map(d => d.contrato))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
                                         </select>
                                     </div>
                                 </div>

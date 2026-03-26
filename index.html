@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS v08.02</title>
+    <title>Painel NPS v08.03</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -271,7 +271,7 @@
                 return { total, p, det, nps, neutros: total - p - det, filtered };
             }, [data, filters, selectedMonthInChart]);
 
-            const monthlyNpsData = useMemo(() => {
+const monthlyNpsData = useMemo(() => {
                 let monthsToShow = [...new Set(data.map(r => r.mes))].filter(Boolean);
                 
                 if (filters.mes !== 'Todos') {
@@ -282,6 +282,23 @@
                         monthsToShow = monthsToShow.filter(m => m === filters.mes);
                     }
                 }
+
+                const sortedMonths = sortMonthsChronologically(monthsToShow);
+                return sortedMonths.map(m => {
+                    // Agora filtramos cada barra do gráfico por TUDO que estiver selecionado nos filtros
+                    const dMes = data.filter(x => 
+                        x.mes === m &&
+                        (filters.unidade === 'Todas' || x.unidade === filters.unidade) &&
+                        (filters.cliente === 'Todos' || x.cliente === filters.cliente) &&
+                        (filters.contrato === 'Todos' || x.contrato === filters.contrato)
+                    ); 
+                    
+                    const p = dMes.filter(x => x.nota >= 9).length;
+                    const det = dMes.filter(x => x.nota <= 6).length;
+                    const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
+                    return { mes: m, score: nps };
+                });
+            // }, [data, filters]); // Importante: adicionamos 'filters' aqui para o gráfico reagir
 
                 const sortedMonths = sortMonthsChronologically(monthsToShow);
                 return sortedMonths.map(m => {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS v08.04</title>
+    <title>Painel NPS v08.05</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -34,7 +34,24 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-type="module">
+        // 1. IMPORTS DO FIREBASE
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // 2. CONFIGURAÇÃO DO FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyDliwQcGZLPwP9FfgUQYzKMww1zP0iEQ-c",
+            authDomain: "painel-nps.firebaseapp.com",
+            projectId: "painel-nps",
+            storageBucket: "painel-nps.firebasestorage.app",
+            messagingSenderId: "981053843206",
+            appId: "1:981053843206:web:ef9dc9d8435ff7e8a0e087"
+        };
+
+        const appFirebase = initializeApp(firebaseConfig);
+        const auth = getAuth(appFirebase);
+
         const { useState, useEffect, useMemo, useRef } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, LabelList } = window.Recharts;
 
@@ -132,7 +149,7 @@
             const [contractsList, setContractsList] = useState([]);
             const [tvSlide, setTvSlide] = useState(0); 
             const [filters, setFilters] = useState({ mes: 'Todos', unidade: 'Todas', cliente: 'Todos', contrato: 'Todos' });
-            const [selectedMonthInChart, setSelectedMonthInChart] = useState(null); // Drill-down do gráfico
+            const [selectedMonthInChart, setSelectedMonthInChart] = useState(null); 
             
             const [exportMenuOpen, setExportMenuOpen] = useState(false);
             const [editingLogin, setEditingLogin] = useState(null);
@@ -153,19 +170,34 @@
 
             const handleLogin = async (e) => {
                 if (e) e.preventDefault();
-                const u = document.getElementById('li').value;
-                const p = document.getElementById('lp').value;
+                const email = document.getElementById('li').value;
+                const pass = document.getElementById('lp').value;
                 setLoading(true);
+                
                 try {
-                    const res = await fetch(`${SCRIPT_URL}?action=login&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`).then(r => r.json());
+                    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+                    const fbUser = userCredential.user;
+
+                    const res = await fetch(`${SCRIPT_URL}?action=login&user=${encodeURIComponent(fbUser.email)}`).then(r => r.json());
+                    
                     if (res.result === "success") {
-                        setUser({ nome: res.nome, email: res.email, tipo: res.tipo });
+                        setUser({ 
+                            nome: res.nome, 
+                            email: fbUser.email, 
+                            tipo: res.tipo, 
+                            uid: fbUser.uid 
+                        });
                         setRawData(res.metrics?.baseDados || []);
                         setUsersList(res.admData || []);
                         setContractsList(res.metrics?.listaContratos || []);
                         setView('dashboard');
-                    } else { alert("Acesso inválido."); }
-                } catch (e) { alert("Erro de conexão com o servidor."); }
+                    } else {
+                        alert("Login OK no Firebase, mas este e-mail não está cadastrado na base da Makro.");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert("E-mail ou senha incorretos.");
+                }
                 setLoading(false);
             };
 
@@ -203,6 +235,7 @@
                     formData.append("Feedback", surveyData.feedback);
                     formData.append("Email do Responsável", user.email);
                     formData.append("Nome do Responsável", user.nome);
+                    formData.append("UID_Firebase", user.uid);
 
                     await fetch(`${SCRIPT_URL}?action=survey&${new URLSearchParams(formData).toString()}`, { method: 'POST' });
                     alert("Avaliação enviada com sucesso!");
@@ -236,7 +269,6 @@
                 link.click();
             };
 
-            // Resetar o mês selecionado no gráfico quando o filtro de mês mudar
             useEffect(() => {
                 setSelectedMonthInChart(null);
             }, [filters.mes]);
@@ -245,7 +277,6 @@
                 const filtered = data.filter(d => {
                     let matchMes = false;
                     
-                    // Se houver um mês selecionado via clique no gráfico, ele tem prioridade para os indicadores
                     if (selectedMonthInChart) {
                         matchMes = d.mes === selectedMonthInChart;
                     } else {
@@ -271,7 +302,7 @@
                 return { total, p, det, nps, neutros: total - p - det, filtered };
             }, [data, filters, selectedMonthInChart]);
 
-const monthlyNpsData = useMemo(() => {
+            const monthlyNpsData = useMemo(() => {
                 let monthsToShow = [...new Set(data.map(r => r.mes))].filter(Boolean);
                 
                 if (filters.mes !== 'Todos') {
@@ -285,7 +316,6 @@ const monthlyNpsData = useMemo(() => {
 
                 const sortedMonths = sortMonthsChronologically(monthsToShow);
                 return sortedMonths.map(m => {
-                    // Agora filtramos cada barra do gráfico por TUDO que estiver selecionado nos filtros
                     const dMes = data.filter(x => 
                         x.mes === m &&
                         (filters.unidade === 'Todas' || x.unidade === filters.unidade) &&
@@ -302,7 +332,6 @@ const monthlyNpsData = useMemo(() => {
 
             const handleBarClick = (data) => {
                 if (data && data.mes) {
-                    // Se clicar no mesmo mês, desmarca (volta para o filtro geral)
                     setSelectedMonthInChart(prev => prev === data.mes ? null : data.mes);
                 }
             };
@@ -455,21 +484,30 @@ const monthlyNpsData = useMemo(() => {
                                         <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Unidade</label>
                                         <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.unidade} onChange={e => setFilters({...filters, unidade: e.target.value})}>
                                             <option value="Todas">Todas</option>
-                                            {[...new Set(data.map(d => d.unidade))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            {[...new Set(data
+                                                .filter(d => (filters.cliente === 'Todos' || d.cliente === filters.cliente) && (filters.contrato === 'Todos' || d.contrato === filters.contrato))
+                                                .map(d => d.unidade))]
+                                                .filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Cliente</label>
                                         <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.cliente} onChange={e => setFilters({...filters, cliente: e.target.value})}>
                                             <option value="Todos">Todos</option>
-                                            {[...new Set(data.map(d => d.cliente))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            {[...new Set(data
+                                                .filter(d => (filters.unidade === 'Todas' || d.unidade === filters.unidade) && (filters.contrato === 'Todos' || d.contrato === filters.contrato))
+                                                .map(d => d.cliente))]
+                                                .filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-bold opacity-30 uppercase ml-2 mb-1 block">Contrato</label>
                                         <select className="w-full bg-[#010816] border border-white/10 p-3 rounded-xl outline-none text-xs text-white" value={filters.contrato} onChange={e => setFilters({...filters, contrato: e.target.value})}>
                                             <option value="Todos">Todos</option>
-                                            {[...new Set(data.map(d => d.contrato))].filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
+                                            {[...new Set(data
+                                                .filter(d => (filters.unidade === 'Todas' || d.unidade === filters.unidade) && (filters.cliente === 'Todos' || d.cliente === filters.cliente))
+                                                .map(d => d.contrato))]
+                                                .filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
                                         </select>
                                     </div>
                                 </div>

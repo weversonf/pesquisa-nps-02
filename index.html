@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel NPS v08.03</title>
+    <title>Painel NPS v08.04</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -298,17 +298,7 @@ const monthlyNpsData = useMemo(() => {
                     const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
                     return { mes: m, score: nps };
                 });
-            // }, [data, filters]); // Importante: adicionamos 'filters' aqui para o gráfico reagir
-
-                const sortedMonths = sortMonthsChronologically(monthsToShow);
-                return sortedMonths.map(m => {
-                    const dMes = data.filter(x => x.mes === m); 
-                    const p = dMes.filter(x => x.nota >= 9).length;
-                    const det = dMes.filter(x => x.nota <= 6).length;
-                    const nps = dMes.length > 0 ? Math.round(((p - det) / dMes.length) * 100) : 0;
-                    return { mes: m, score: nps };
-                });
-            }, [data, filters.mes]);
+            }, [data, filters]);
 
             const handleBarClick = (data) => {
                 if (data && data.mes) {
